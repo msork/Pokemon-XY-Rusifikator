@@ -27,12 +27,18 @@ For each game, all 147 update paths also exist in base, 27 have identical bytes,
 
 ## Research sources and provisional conclusions
 
-- Citra's official game-modding guide documents per-title mod directories under `load/mods/<Title ID>` and the `romfs` replacement folder: <https://citra.azahar-emu.org/help/feature/game-modding/>. This supports the expected base title ID layout as a working hypothesis; the target MSYS2 installation remains unverified.
+- Citra's official game-modding guide documents per-title mod directories under `load/mods/<Title ID>` and the `romfs` replacement folder: <https://citra.azahar-emu.org/help/feature/game-modding/>. This supports the expected base title ID layout; the local build's X/Y behavior remains unverified.
 - Azahar's `LayeredFS` source documents same-path RomFS replacements and patched files: <https://github.com/azahar-emu/azahar/blob/master/src/core/file_sys/layered_fs.cpp>. This confirms replacement semantics at the RomFS overlay layer, but not which base/update RomFS tree the user's installed build supplies; that remains open pending inspection of the local build and runtime logs.
 - pk3DS is a Gen VI-capable project and includes Gen 6 structures, but complete text extraction/rebuild coverage is not established: <https://github.com/kwsch/pk3DS>.
 - Project Pokémon's X/Y file map assigns `a/0/7/4` to English text, `a/0/8/2` to English script text, and `a/1/8/5` to fonts: <https://projectpokemon.org/home/docs/gen-6/xy-file-system-r89/>. Treat as a community reference and validate against actual contents.
 - Kuriimu-family support and the exact X/Y message format have not yet been validated against these files. No parser is selected.
 - A secondary encoding reference reports rasterized fonts and system-font fallback in Gen VI, but this does not prove Russian renders in X/Y: <https://bulbapedia.bulbagarden.net/wiki/Character_encoding_(Generation_V%E2%80%93present)>.
+
+## Local Azahar evidence
+
+Read-only inspection of `%APPDATA%\Azahar\log\azahar_log.txt` identifies the user's emulator as `Azahar Version: 2126.2 | HEAD-219d743`, Build Variant `MSYS2`. The config points NAND and SDMC to `%APPDATA%\Azahar\nand` and `%APPDATA%\Azahar\sdmc`. The current log is for Pokémon Alpha Sapphire (`000400000011C500`), and records LayeredFS replacement files in use. The existing mod folders are `load/mods/000400000011C400` and `000400000011C500`, with a `RomFS` folder (case-insensitive on Windows). This is direct evidence that per-title RomFS overrides work in this build for another title.
+
+The four X/Y base and update title paths are absent from the inspected NAND, and the current log contains no X/Y boot. Thus the local build's X/Y update-layer precedence and X/Y-specific LayeredFS behavior remain unverified. No emulator interaction or game runtime test was performed in this milestone.
 
 ## Decisions
 
