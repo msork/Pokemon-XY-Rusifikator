@@ -48,4 +48,6 @@ Test the ASCII control first. If `ASCII 2C` appears, the emulator read the patch
 - `python -m unittest discover -s tests -v`: 11 tests passed, including the new ASCII probe rebuild check.
 - `python scripts/build_language_screen_poc.py`: four X/Y variant archives built; the script reparses each output, checks message 25, and verifies the unchanged-member set.
 - `python scripts/verify_text_roundtrips.py`: retained Milestone 2B full-corpus verification for all 1,452 TextFile members.
-- No Milestone 2C patch was installed or launched by this project run. No Cyrillic rendering or LayeredFS runtime success is claimed.
+- On 2026-11-18, the ASCII control archive was installed to both AzaharPlus mod targets. The installed X and Y hashes each verified as `252f90a4eca1c16dac0f0a32758e867ec7b9dbb322c00f975e3d7fc6ab233d0c`, size 2,388,484 bytes. The emulator was not launched by this operation.
+- Before replacement, the previous installed file for each title was backed up under `build/milestone-2c/install-backups/20261118T215421Z/`. Each backup hash is `ebfa2db696d0e7b2c5bcd2b6fe20527ff395e51590b605b4250f30e8ce535cae`.
+- No Cyrillic rendering or LayeredFS runtime success is claimed. Await the user's runtime observation of the ASCII control on both games.
