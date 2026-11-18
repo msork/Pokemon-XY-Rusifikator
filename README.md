@@ -14,18 +14,19 @@ Contributions should be made as topic branches and submitted through the primary
 
 The four extracted datasets under `workspace/` are read-only local source material, excluded from Git. Original `.3ds` files, update data, saves, extracted resources, and full modified binaries must never enter this repository. Generated inspection data belongs in ignored `build/` or `reports/`. Any eventual release must use a legally reviewed delta format and preserve existing saves and game files.
 
-## Current milestone: 2B
+## Current milestone: 2C
 
-Read-only Gen VI GARC inspection, lossless TextFile serialization, safe replacement, and CFNT character-map inspection are implemented. The commands below write extracted data and disposable test patches only under ignored `build/`:
+Read-only Gen VI GARC inspection, lossless TextFile serialization, safe replacement, CFNT character-map inspection, and controlled AzaharPlus language-screen probes are implemented. The commands below write extracted data and disposable test patches only under ignored `build/`:
 
 ```powershell
 python scripts/inspect_assets.py
 python scripts/verify_text_roundtrips.py
 python scripts/build_russian_poc.py
+python scripts/build_language_screen_poc.py
 python -m unittest discover -s tests -v
 ```
 
-`workspace/` must exist locally and contain the four datasets specified in the project instructions. The proof-of-concept patches are not installed automatically. See [Milestone 2A findings](docs/research/milestone-2a.md), [Milestone 2B findings](docs/research/milestone-2b.md), and the [AzaharPlus test plan](docs/testing/azaharplus.md).
+`workspace/` must exist locally and contain the four datasets specified in the project instructions. The proof-of-concept patches are not installed automatically. The Milestone 2C ASCII control must be tested before interpreting the Russian rendering probe. See [Milestone 2A findings](docs/research/milestone-2a.md), [Milestone 2B findings](docs/research/milestone-2b.md), [Milestone 2C findings](docs/research/milestone-2c.md), and the [AzaharPlus test plan](docs/testing/azaharplus.md).
 
 ## Project layout
 

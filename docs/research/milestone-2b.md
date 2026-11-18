@@ -14,9 +14,11 @@ Automated tests cover synthetic TextFile and GARC no-change round trips, edited 
 
 ## Russian proof patch
 
-`python scripts/build_russian_poc.py` writes separate X/Y LayeredFS directory trees under `build/milestone-2b/`. It uses the update 1.5 `a/0/7/4` archive, GARC member 35/0, message ID 22. The update adds this message after the base archive's 22 lines; the source is the update version marker `Ver. 1.5`. The proof replaces that label with the Russian greeting whose code points are U+041F U+0440 U+0438 U+0432 U+0435 U+0442 U+0021. This marker is in the title/save menu's message group, beside the Continue/save-summary labels.
+`python scripts/build_russian_poc.py` writes separate X/Y LayeredFS directory trees under `build/milestone-2b/`. It uses the update 1.5 `a/0/7/4` archive, GARC member 35/0, message ID 22, and replaces its `Ver. 1.5` string with a Russian greeting whose code points are U+041F U+0440 U+0438 U+0432 U+0435 U+0442 U+0021. Its runtime use has not been identified.
 
-Both X and Y patch files have SHA-256 `ebfa2db696d0e7b2c5bcd2b6fe20527ff395e51590b605b4250f30e8ce535cae`. Each output preserves the other 150 GARC members byte-for-byte and the archive remains the original 2,388,484-byte length. The source archive is never overwritten. The patch has not been installed and no AzaharPlus runtime result is claimed.
+Both X and Y patch files have SHA-256 `ebfa2db696d0e7b2c5bcd2b6fe20527ff395e51590b605b4250f30e8ce535cae`. Each output preserves the other 150 GARC members byte-for-byte and the archive remains the original 2,388,484-byte length. The source archive is never overwritten.
+
+Correction from Milestone 2C: the `Ver. 1.5` message replaced here at member 35/0, ID 22 is not the label shown on the initial language-selection screen. That visible label is update-only message 25 in member 85/0 of the same archive. Therefore, the unchanged initial screen after installing this Milestone 2B patch was inconclusive about LayeredFS. See [Milestone 2C findings](milestone-2c.md) for the exact screen resource and controlled test plan.
 
 ## Font and fallback investigation
 

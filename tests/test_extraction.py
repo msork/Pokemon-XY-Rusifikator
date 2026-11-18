@@ -6,6 +6,7 @@ from src.extraction.fonts import cmap_blocks
 from src.extraction.garc import GARC
 from src.extraction.lz11 import decompress
 from src.extraction.messages import MessageError, TextFile, _rol16, rebuild_identity
+from scripts.build_language_screen_poc import replace_message_archive
 
 
 def make_textfile(words):
@@ -65,6 +66,15 @@ class ExtractionTests(unittest.TestCase):
         self.assertEqual(len(rebuilt.members), 1)
         self.assertEqual(TextFile.parse(rebuilt.members[0].data).lines[0].display_text, "\u041f\u0440\u0438\u0432\u0435\u0442!")
         self.assertNotEqual(hashlib.sha256(source_garc).digest(), hashlib.sha256(edited_garc).digest())
+
+    def test_language_screen_probe_rebuilds_exact_target_and_keeps_other_members(self):
+        source_text = make_textfile(tuple(map(ord, "Ver. 1.5")) + (0,))
+        source_garc = make_garc(source_text)
+        edited_garc = replace_message_archive(source_garc, (0, 0), 0, "Ver. 1.5", "ASCII 2C")
+        rebuilt = GARC.parse(edited_garc)
+        self.assertEqual(len(rebuilt.members), 1)
+        self.assertEqual(TextFile.parse(rebuilt.members[0].data).lines[0].display_text, "ASCII 2C")
+        self.assertEqual(len(edited_garc), len(source_garc))
 
     def test_textfile_identity_with_encrypted_line(self):
         # One two-word message encrypted with the Generation VI initial key.
