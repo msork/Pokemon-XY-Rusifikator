@@ -4,7 +4,7 @@ Date: 2026-11-18
 
 ## Local inventory
 
-SHA-256 manifests were generated for all four trees at `reports/pokemon-x-base.jsonl`, `reports/pokemon-y-base.jsonl`, `reports/pokemon-x-update-1.5.jsonl`, and `reports/pokemon-y-update-1.5.jsonl`. Reports are local and ignored by Git.
+SHA-256 manifests were generated for all four trees under ignored `reports/`. Verified dataset totals:
 
 | Dataset | Files | Bytes |
 |---|---:|---:|
@@ -13,40 +13,21 @@ SHA-256 manifests were generated for all four trees at `reports/pokemon-x-base.j
 | X update 1.5 | 147 | 28,575,664 |
 | Y update 1.5 | 147 | 28,575,648 |
 
-Combined size is 3,624,704,206 bytes. Sampled extensionless resources under `a/` start with `43 52 41 47` (`CRAG`, byte-reversed GARC magic) and consistent GARC-like header fields. This is signature evidence, not a completed structural parse. The trees also contain `.cro` modules, `btl_ai.garc`, `static.crs`, shaders, and audio.
+Combined size is 3,624,704,206 bytes. Sampled extensionless resources under `a/` begin with `43 52 41 47` (`CRAG`). Milestone 2A now confirms the candidate GARC structures and message formats.
 
-The Project Pokémon community file map identifies likely English text archives at `a/0/7/4` and `a/0/8/2`, script text in other `a/0/8/*` resources, and font resources around `a/1/8/5`; all those paths exist. These mappings are discovery leads, not an authoritative format specification. No archive has yet been unpacked, no message contents have been validated, and no individual font member has been identified.
+## X/Y and update comparisons
 
-## X/Y byte comparison
+Base comparison: 625 identical paths, 28 differing paths, no path-only entries. Update comparison: 109 identical paths, 38 differing paths, no path-only entries. For each game, all 147 update paths exist in base; 27 have identical bytes and 120 differ. There are 506 base-only paths and no update-only paths. These results establish byte differences, not semantic purpose or runtime precedence.
 
-Base comparison: 625 identical paths, 28 differing paths, zero path-only entries. Update comparison: 109 identical, 38 differing, zero path-only entries. Differences prove byte variation only; their semantic purpose has not yet been determined.
+Candidate-specific findings are recorded in [Milestone 2A research](milestone-2a.md): `a/0/7/4` exists in base and update 1.5, while `a/0/8/2` and `a/1/8/5` are base-only.
 
-## Base versus update path comparison
+## Research references
 
-For each game, all 147 update paths also exist in base, 27 have identical bytes, and 120 differ; there are 506 base-only paths and no update-only paths. This means update 1.5 supplies same-path overrides for 120 resources. It does not prove which side Azahar selects at runtime. Comparing identified candidate archives shows the `a/0/7/*` and `a/1/8/*` families vary between base and update, so effective text and font assets must be resolved against the installed update rather than assumed from base.
+- pk3DS has Gen VI GARC and TextFile implementations: https://github.com/kwsch/pk3DS. Milestone 2A uses it as a format reference only; no source code was copied.
+- Project Pokemon's X/Y file map identifies text and font candidate paths: https://projectpokemon.org/home/docs/gen-6/xy-file-system-r89/. This is a discovery reference, validated against local data in Milestone 2A.
+- AzaharPlus project: https://github.com/AzaharPlus/AzaharPlus. AzaharPlus is the project's primary target as of Milestone 2A. Local user-data and LayeredFS observations are documented there.
+- Upstream Azahar LayeredFS implementation: https://github.com/azahar-emu/azahar/blob/master/src/core/file_sys/layered_fs.cpp. This is background evidence only, not proof of X/Y update precedence in the local fork.
 
-## Research sources and provisional conclusions
+## Local emulator evidence and limitations
 
-- Citra's official game-modding guide documents per-title mod directories under `load/mods/<Title ID>` and the `romfs` replacement folder: <https://citra.azahar-emu.org/help/feature/game-modding/>. This supports the expected base title ID layout; the local build's X/Y behavior remains unverified.
-- Azahar's `LayeredFS` source documents same-path RomFS replacements and patched files: <https://github.com/azahar-emu/azahar/blob/master/src/core/file_sys/layered_fs.cpp>. This confirms replacement semantics at the RomFS overlay layer, but not which base/update RomFS tree the user's installed build supplies; that remains open pending inspection of the local build and runtime logs.
-- pk3DS is a Gen VI-capable project and includes Gen 6 structures, but complete text extraction/rebuild coverage is not established: <https://github.com/kwsch/pk3DS>.
-- Project Pokémon's X/Y file map assigns `a/0/7/4` to English text, `a/0/8/2` to English script text, and `a/1/8/5` to fonts: <https://projectpokemon.org/home/docs/gen-6/xy-file-system-r89/>. Treat as a community reference and validate against actual contents.
-- Kuriimu-family support and the exact X/Y message format have not yet been validated against these files. No parser is selected.
-- A secondary encoding reference reports rasterized fonts and system-font fallback in Gen VI, but this does not prove Russian renders in X/Y: <https://bulbapedia.bulbagarden.net/wiki/Character_encoding_(Generation_V%E2%80%93present)>.
-
-## Local Azahar evidence
-
-Read-only inspection of `%APPDATA%\Azahar\log\azahar_log.txt` identifies the user's emulator as `Azahar Version: 2126.2 | HEAD-219d743`, Build Variant `MSYS2`. The config points NAND and SDMC to `%APPDATA%\Azahar\nand` and `%APPDATA%\Azahar\sdmc`. The current log is for Pokémon Alpha Sapphire (`000400000011C500`), and records LayeredFS replacement files in use. The existing mod folders are `load/mods/000400000011C400` and `000400000011C500`, with a `RomFS` folder (case-insensitive on Windows). This is direct evidence that per-title RomFS overrides work in this build for another title.
-
-The four X/Y base and update title paths are absent from the inspected NAND, and the current log contains no X/Y boot. Thus the local build's X/Y update-layer precedence and X/Y-specific LayeredFS behavior remain unverified. No emulator interaction or game runtime test was performed in this milestone.
-
-## Decisions
-
-Use a local Python read-only inventory tool. Do not select a message parser or edit game assets until samples are signature-inspected and a compatible implementation is verified. Keep base and update resources separate until update precedence is verified.
-
-## Open questions
-
-- Which archive members under the candidate `a/` resources contain messages and font data?
-- Which resources differ semantically across X/Y and base/update?
-- What exact Azahar version and MSYS2 user directory does the target PC use?
-- Does installed update 1.5 replace text/font resources, and how does this build resolve LayeredFS against installed updates?
+An earlier inspection found standard Azahar MSYS2 profile data; this is superseded by the user's target update to AzaharPlus 2126.2-A. The local AzaharPlus installation is at `C:\Users\maxim\Games\azaharplus-2126.2-A-windows`, and its observed user profile is `%APPDATA%\AzaharPlus`. Existing LayeredFS replacement logs for other games confirm the local build uses RomFS replacements, but X/Y title and update behavior are not yet runtime-verified. No game runtime test was performed in Milestone 1 or 2A.

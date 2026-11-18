@@ -10,7 +10,7 @@
 6. Validate control sequences, placeholders, glyph coverage, length, and glossary rules.
 7. Rebuild only the necessary resources in isolated build directories.
 8. Package a legally reviewed delta patch, with X and Y target metadata.
-9. Verify in Azahar with update 1.5 and retain evidence for each runtime check.
+9. Verify in AzaharPlus 2126.2-A with update 1.5 enabled and retain evidence for each runtime check.
 
 ## Source immutability
 
@@ -22,4 +22,4 @@ Records will use stable IDs derived from source provenance and record index, not
 
 ## Effective resources
 
-Base and update trees remain separate. The effective manifest records each path's provider and hash. Update replacement precedence is not considered established until checked against the target Azahar build and official loader source.
+Base and update trees remain separate. The effective manifest records each path's provider and hash. Update replacement precedence is not considered established until checked against AzaharPlus 2126.2-A and both X/Y titles. The local AzaharPlus user-data path is `%APPDATA%\\AzaharPlus`; X/Y-specific update precedence is still unverified.

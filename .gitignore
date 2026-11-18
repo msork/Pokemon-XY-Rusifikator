@@ -2,17 +2,38 @@
 /workspace/**
 *.3ds
 *.3dsx
+*.nsp
+*.xci
 *.cia
 *.cxi
 *.cci
 *.bcxi
 *.bcci
+*.app
+*.cfa
+*.ncch
 *.romfs
 *.garc
 *.cro
 *.sav
+*.save
 *.srm
+*.dsv
+*.sdf
+*.state
+*.sav.*
 *.bin
+*.key
+*.pem
+*.p12
+*.pfx
+*.secret
+*.token
+*.credentials
+*.kdbx
+*.ppk
+id_rsa*
+id_ed25519*
 
 # Generated builds, reports, and transient data
 /build/
@@ -29,3 +50,5 @@ __pycache__/
 .env
 .env.*
 !.env.example
+secrets/
+credentials/
