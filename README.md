@@ -14,16 +14,18 @@ Contributions should be made as topic branches and submitted through the primary
 
 The four extracted datasets under `workspace/` are read-only local source material, excluded from Git. Original `.3ds` files, update data, saves, extracted resources, and full modified binaries must never enter this repository. Generated inspection data belongs in ignored `build/` or `reports/`. Any eventual release must use a legally reviewed delta format and preserve existing saves and game files.
 
-## Current milestone: 2A
+## Current milestone: 2B
 
-Read-only Gen VI GARC inspection, TextFile extraction, and CFNT character-map inspection are implemented. The command below writes extracted member files and reports only under ignored `build/milestone-2a/`:
+Read-only Gen VI GARC inspection, lossless TextFile serialization, safe replacement, and CFNT character-map inspection are implemented. The commands below write extracted data and disposable test patches only under ignored `build/`:
 
 ```powershell
 python scripts/inspect_assets.py
+python scripts/verify_text_roundtrips.py
+python scripts/build_russian_poc.py
 python -m unittest discover -s tests -v
 ```
 
-`workspace/` must exist locally and contain the four datasets specified in the project instructions. See [Milestone 2A findings](docs/research/milestone-2a.md) and [AzaharPlus test plan](docs/testing/azaharplus.md).
+`workspace/` must exist locally and contain the four datasets specified in the project instructions. The proof-of-concept patches are not installed automatically. See [Milestone 2A findings](docs/research/milestone-2a.md), [Milestone 2B findings](docs/research/milestone-2b.md), and the [AzaharPlus test plan](docs/testing/azaharplus.md).
 
 ## Project layout
 

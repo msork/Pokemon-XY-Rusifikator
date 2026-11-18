@@ -1,0 +1,35 @@
+# Milestone 2B: TextFile Serialization and Russian Rendering Proof
+
+Date: 2026-11-18. Source assets remain read-only under `workspace/`. Generated message samples and test patches are under ignored `build/`.
+
+## Serializer and round-trip results
+
+The TextFile writer retains the 0x10-byte header, section length field, line-table reserved values, message ID order, each line's original padding bytes, terminator suffix, and control-code words. It re-encodes decoded 16-bit words with the per-line rolling key and preserves the per-message initial-key progression. Variable-length edits update offsets and lengths while leaving every unrelated message's data and formatting intact.
+
+`python scripts/verify_text_roundtrips.py` reads the source GARCs without extracting them in place. It byte-round-trips all 1,452 TextFile members across X/Y base and update 1.5: 125,638 source message records total. Per-game effective update coverage is 35,214 messages (27,607 from update `a/0/7/4` plus 7,607 from base `a/0/8/2`).
+
+Safe replacements validate message IDs, BMP encoding, absence of accidental empty strings, 16-bit table length limits, and exact control-code/placeholder token sequence. Unsupported controls in plain text, non-BMP characters, invalid IDs, and changed placeholders/control codes are rejected. Sequence-of-word replacements allow intentional control-bearing edits only when the complete token signature remains identical.
+
+Automated tests cover synthetic TextFile and GARC no-change round trips, edited TextFile serialization, edited GARC repacking, preservation of message IDs, control-code/placeholder checks, invalid encodings, and LZ11 literal decoding. No test modifies a source asset.
+
+## Russian proof patch
+
+`python scripts/build_russian_poc.py` writes separate X/Y LayeredFS directory trees under `build/milestone-2b/`. It uses the update 1.5 `a/0/7/4` archive, GARC member 35/0, message ID 22. The update adds this message after the base archive's 22 lines; the source is the update version marker `Ver. 1.5`. The proof replaces that label with the Russian greeting whose code points are U+041F U+0440 U+0438 U+0432 U+0435 U+0442 U+0021. This marker is in the title/save menu's message group, beside the Continue/save-summary labels.
+
+Both X and Y patch files have SHA-256 `ebfa2db696d0e7b2c5bcd2b6fe20527ff395e51590b605b4250f30e8ce535cae`. Each output preserves the other 150 GARC members byte-for-byte and the archive remains the original 2,388,484-byte length. The source archive is never overwritten. The patch has not been installed and no AzaharPlus runtime result is claimed.
+
+## Font and fallback investigation
+
+All 10 candidate CFNTs lack mappings for U+0400 through U+052F, including U+0401 and U+0451. Their CMAP tables map Latin, kana, Hangul, full-width forms, and punctuation. AzaharPlus 2126.2-A release notes do not describe game-font fallback. Since game text is resolved to the game's own CFNT glyph mapping, emulator UI support or bundled FreeType/FriBidi DLLs do not establish in-game glyph support. A run with the proof patch is still required to determine whether AzaharPlus substitutes missing glyphs for this title.
+
+If the test displays replacement boxes or a default glyph, the next implementation choice is to add glyph bitmaps and widths to the appropriate CFNT glyph sheet and extend its CWDH/CMAP structures, or to repurpose existing unused glyph slots if any are verified. No font modification has been attempted; font atlas sizing, texture alignment, and actual X/Y font selection remain open.
+
+## Update and LayeredFS evidence
+
+AzaharPlus 2126.2-A states it is the same as Azahar 2126.2 except for its listed fork-specific changes. The matching upstream 2126.2 source normalizes update Title IDs by removing the update mask before forming the LayeredFS mod ID, and wraps the active NCCH RomFS with a LayeredFS root at `load/mods/<base-title-id>/romfs`. This supports the expected X/Y folders `0004000000055D00` and `0004000000055E00`, not the update IDs. Source references: [NCCHContainer update-ID normalization](https://github.com/azahar-emu/azahar/blob/2126.2/src/core/file_sys/ncch_container.cpp#L1736-L1746), [RomFS LayeredFS construction](https://github.com/azahar-emu/azahar/blob/2126.2/src/core/file_sys/ncch_container.cpp#L2653-L2724), and the [AzaharPlus 2126.2-A release](https://github.com/AzaharPlus/AzaharPlus/releases/tag/AZAHAR_PLUS_2126_2_A).
+
+Local AzaharPlus logs show LayeredFS replacements for other titles, but the local profile has no X/Y boot evidence. The X/Y v1.5 data tree supplies `a/0/7/4` with 151 members and an update-only line 22; update 1.5 has 27,607 lines versus 27,605 in base. The test patch uses the base game Title ID and update archive's unique version marker to probe the active title path. The loader source establishes the mod root and overlay mechanism; only a logged X/Y run can confirm the local update is enabled and the test resource is being selected. That runtime confirmation remains pending.
+
+## Runtime test status and next steps
+
+No patch was installed, no game was launched, and no save data was accessed. Follow the exact copy, launch, log-capture, and removal instructions in [the AzaharPlus test plan](../testing/azaharplus.md). Test each game separately with update 1.5 enabled. Capture the untouched title screen first, then the POC screen and LayeredFS log. Report whether the Russian string renders correctly, as a fallback glyph, or as an empty/default character. Do not begin bulk translation until the Cyrillic result is known.
