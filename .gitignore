@@ -1,0 +1,31 @@
+# Extracted RomFS and game/update content (copyrighted source data)
+/workspace/**
+*.3ds
+*.3dsx
+*.cia
+*.cxi
+*.cci
+*.bcxi
+*.bcci
+*.romfs
+*.garc
+*.cro
+*.sav
+*.srm
+*.bin
+
+# Generated builds, reports, and transient data
+/build/
+/reports/
+/dist/*
+!/dist/.gitkeep
+*.tmp
+*.log
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Credentials and local configuration
+.env
+.env.*
+!.env.example
