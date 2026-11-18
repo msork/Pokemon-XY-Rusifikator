@@ -7,5 +7,6 @@
 - Keep tooling deterministic and document evidence, assumptions, and unverified behavior.
 - Primary runtime target: AzaharPlus 2126.2-A for Windows 11. Do not assume standard Azahar configuration paths or behavior; record local evidence and keep X/Y runtime results distinct.
 - Never claim runtime testing without a recorded AzaharPlus test.
-- Primary Git remote is `https://git.gay/msork/Pokemon-XY-Rusifikator`; GitHub is an externally managed mirror. Never push directly to GitHub or force-push. Check remote state before pushing.
+- Primary Git remote is `git@git.gay:msork/Pokemon-XY-Rusifikator.git` over SSH; GitHub is an externally managed mirror. Require SSH authentication, never push directly to GitHub, and never force-push. Check remote state before every push and stop if it contains unrelated history.
+- After completing and testing an authorized milestone, commit the verified source/documentation changes and push the current branch to git.gay automatically. Never push unfinished work, extracted assets, or copyrighted game assets.
 - WTFPL Version 2 applies only to original project code and documentation; it does not license Nintendo/Game Freak assets or third-party dependencies.
