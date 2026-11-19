@@ -52,3 +52,9 @@ The inspected `%APPDATA%\AzaharPlus\log\azahar_log.old.txt` records launches of 
 Seeing `ASCII 2C` in the next run will be direct runtime evidence that the new update archive resource is overlaid. If the exact ASCII label remains visible even though it is present in the update-only member, that separates the problem from glyph support and points to the effective mod path, competing mod, update resource selection, or runtime cache. Record the title ID and update version shown by the emulator, screenshot, mod file hash, and complete log before reporting.
 
 After LayeredFS is confirmed, test uppercase and lowercase Cyrillic, Ё/ё, punctuation, mixed digits, and a longer wrapped string before starting bulk translation. Verify other menus and gameplay screens in later QA. No Milestone 2C variant has been launched by this project run.
+
+## Milestone 2D Russian test installation
+
+On 2026-11-19, only the two `a\0\7\4` mod files were replaced with the generated Russian variants. Both installed files hash to `d2fbd6bebd5b7764b2e4ec2077d7f3ed7cbc343dc60bf3b1b73933db24c572fa`. The previous ASCII controls are backed up at `build\milestone-2d\install-backups\20261119T182134Z\` and hash to `252f90a4eca1c16dac0f0a32758e867ec7b9dbb322c00f975e3d7fc6ab233d0c`. Exact paths and restore commands are in [the Milestone 2D record](../research/milestone-2d.md).
+
+AzaharPlus was not launched for this replacement. Launch Pokémon X and Pokémon Y separately with update 1.5 enabled and report whether `Привет!` renders correctly in each. Cyrillic rendering is not yet confirmed.
