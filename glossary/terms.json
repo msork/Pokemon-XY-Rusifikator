@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "status_values": ["established", "provisional_review_required", "needs_research"],
+  "categories": {
+    "ui": [
+      {"source": "Pokémon", "russian": "Покемон", "status": "provisional_review_required"},
+      {"source": "Pokédex", "russian": "Покедекс", "status": "provisional_review_required"},
+      {"source": "Trainer", "russian": "Тренер", "status": "provisional_review_required"},
+      {"source": "Gym Leader", "russian": "Лидер стадиона", "status": "provisional_review_required"},
+      {"source": "Experience Points", "russian": "Очки опыта", "status": "provisional_review_required"},
+      {"source": "Critical Hit", "russian": "Критический удар", "status": "provisional_review_required"},
+      {"source": "Save", "russian": "Сохранить", "status": "provisional_review_required"},
+      {"source": "Continue", "russian": "Продолжить", "status": "provisional_review_required"},
+      {"source": "New Game", "russian": "Новая игра", "status": "provisional_review_required"},
+      {"source": "Options", "russian": "Настройки", "status": "provisional_review_required"},
+      {"source": "Text Speed", "russian": "Скорость текста", "status": "provisional_review_required"},
+      {"source": "Slow", "russian": "Медленно", "status": "provisional_review_required"},
+      {"source": "Normal", "russian": "Обычно", "status": "provisional_review_required"},
+      {"source": "Fast", "russian": "Быстро", "status": "provisional_review_required"}
+    ],
+    "locations": [
+      {"source": "Vaniville Town", "russian": "Ванивилл", "status": "provisional_review_required", "note": "Place-name spelling requires project terminology review."}
+    ],
+    "moves": [
+      {"source": "Tackle", "russian": null, "status": "needs_research"},
+      {"source": "Growl", "russian": null, "status": "needs_research"},
+      {"source": "Vine Whip", "russian": null, "status": "needs_research"},
+      {"source": "Scratch", "russian": null, "status": "needs_research"}
+    ],
+    "abilities": [
+      {"source": "Overgrow", "russian": null, "status": "needs_research"},
+      {"source": "Blaze", "russian": null, "status": "needs_research"},
+      {"source": "Torrent", "russian": null, "status": "needs_research"}
+    ],
+    "items": [
+      {"source": "Potion", "russian": null, "status": "needs_research"},
+      {"source": "Super Potion", "russian": null, "status": "needs_research"},
+      {"source": "Poké Ball", "russian": "Покебол", "status": "provisional_review_required"}
+    ],
+    "character_names": [
+      {"source": "Calem", "russian": "Калем", "status": "provisional_review_required"},
+      {"source": "Serena", "russian": "Серена", "status": "provisional_review_required"},
+      {"source": "Shauna", "russian": "Шауна", "status": "provisional_review_required"}
+    ]
+  }
+}

@@ -45,9 +45,10 @@ def _display(units: tuple[int, ...]) -> tuple[str, tuple[dict[str, object], ...]
             if i + 2 >= len(units):
                 raise MessageError("Truncated variable/control sequence")
             count = units[i + 1]
-            if count < 1 or i + 1 + count >= len(units):
+            end = i + 2 + count
+            if count < 1 or end > len(units):
                 raise MessageError("Invalid variable/control sequence length")
-            args = list(units[i + 3:i + 1 + count])
+            args = list(units[i + 3:end])
             code = units[i + 2]
             token: dict[str, object] = {"type": "variable", "count": count, "code": code, "args": args}
             if code == 0xBE00:
@@ -67,7 +68,7 @@ def _display(units: tuple[int, ...]) -> tuple[str, tuple[dict[str, object], ...]
                 display = f"[VAR {code:04X}{'(' + rendered_args + ')' if args else ''}]"
             output.append(display)
             tokens.append(token)
-            i += 2 + count
+            i = end
         elif value == 0x005C:
             output.append("\\\\")
             tokens.append({"type": "escape", "unit": value})
@@ -85,6 +86,30 @@ def _display(units: tuple[int, ...]) -> tuple[str, tuple[dict[str, object], ...]
             output.append(chr(value))
             i += 1
     return "".join(output), tuple(tokens)
+
+
+def _terminator_index(units: tuple[int, ...]) -> int:
+    """Find the line terminator outside length-prefixed variable arguments."""
+    i = 0
+    while i < len(units):
+        value = units[i]
+        if value == 0:
+            return i
+        if value == 0x0010:
+            if i + 2 >= len(units):
+                raise MessageError("Truncated variable/control sequence before terminator")
+            count = units[i + 1]
+            end = i + 2 + count
+            if count < 1 or end > len(units):
+                raise MessageError("Invalid variable/control sequence before terminator")
+            i = end
+        else:
+            i += 1
+    # Some observed Gen VI records end exactly after a complete control event
+    # (for example 0010 0002 BDFF 0000) without a separate terminator word.
+    # Preserve these records byte-for-byte, but replacement remains disabled
+    # because there is no source terminator suffix to retain.
+    return len(units)
 
 
 def _encode_words(words: Sequence[int], initial_key: int) -> tuple[int, ...]:
@@ -161,9 +186,9 @@ class TextFile:
             decoded_tuple = tuple(decoded)
             display, tokens = _display(decoded_tuple)
             try:
-                terminal = decoded_tuple.index(0)
-            except ValueError as exc:
-                raise MessageError(f"Message {message_id} has no terminating zero word") from exc
+                terminal = _terminator_index(decoded_tuple)
+            except MessageError as exc:
+                raise MessageError(f"Message {message_id}: {exc}") from exc
             lines.append(MessageLine(
                 message_id, relative_offset, reserved, padding_after, tuple(encrypted), decoded_tuple,
                 display, tokens, decoded_tuple[terminal:],

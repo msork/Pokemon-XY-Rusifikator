@@ -1,12 +1,12 @@
 # Translation Record Specification (Draft)
 
-Each extracted message record must include a stable ID, source text, source language, target scope (`shared`, `x`, or `y`), source game/version and relative path, archive/member/message indices, source resource hash, context, raw control-code signature, translation text, and one status: `untranslated`, `machine_draft`, `reviewed`, `validated`, or `tested_in_game`.
+Each source row in the local JSONL catalog includes a stable coordinate ID, exact source-variant SHA-256, decoded source text, ordered text/control segments, source language, every game/version/path occurrence, archive/member/TextFile hashes, member/message indices, and raw control words. A translation row is keyed by `(record_id, source_variant_sha256)`, includes game scope (`shared`, `x`, or `y`), version scope (`base`, `update-1.5`, or both), ordered Russian text/control segments, and one status: `untranslated`, `machine_draft`, `reviewed`, `validated`, or `tested_in_game`.
 
 Equal source wording does not establish shared identity. Sharing requires equivalent context, placeholders, and formatting. Machine-generated drafts must never be marked reviewed.
 
 ## Stable identity and provenance
 
-Use a stable ID derived from the game/resource scope and source location, not translated text: game scope, relative RomFS path, GARC entry/subfile ID, and TextFile message index. Record every contributing X/Y and base/update source hash when equivalent messages are shared. Keep the raw encrypted words in local generated build data only; translation records retain decoded source, exact control-word sequence, and placeholders needed for safe rebuilding.
+Use the stable coordinate ID `gen6:<resource path>:<entry>/<subfile>:<message index>`, not translated text. The source-variant hash disambiguates changed message words at a stable coordinate. Group occurrences only when the coordinate and exact decoded source words match; preserve all X/Y and base/update hashes. Equal wording at different coordinates remains separate. Keep raw encrypted words in local generated build data only; committed translation data retains the exact source hash and control-word sequence required for safe import without duplicating full English source archives.
 
 ## Local batch workflow
 

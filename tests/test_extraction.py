@@ -103,6 +103,12 @@ class ExtractionTests(unittest.TestCase):
             source.rebuild({0: "replacement"})
         self.assertEqual(TextFile.parse(source.rebuild({0: (0x0010, 1, 0xBE01)})).lines[0].tokens, source.lines[0].tokens)
 
+    def test_complete_control_only_record_without_terminator_round_trips(self):
+        source = TextFile.parse(make_textfile((0x0010, 2, 0xBDFF, 0)))
+        self.assertEqual(rebuild_identity(source), source.raw)
+        with self.assertRaises(MessageError):
+            source.rebuild({0: "replacement"})
+
     def test_replacement_rejects_empty_non_bmp_and_bad_message_id(self):
         source = TextFile.parse(make_textfile((ord("A"), 0)))
         for replacement in ("", "\U0001F600"):

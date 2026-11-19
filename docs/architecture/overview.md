@@ -18,8 +18,10 @@
 
 ## Translation identity
 
-Records will use stable IDs derived from source provenance and record index, not English text alone. Translation entries will record source hash, game/version scope, context, status, and control-code signature. Shared text may be linked only after context and formatting equivalence are established.
+Source records use `gen6:<resource path>:<GARC entry>/<subfile>:<TextFile message index>` as the stable coordinate ID. A SHA-256 over exact decoded message words distinguishes version-specific source variants. Identical coordinates and words across X/Y/base/update merge provenance; different source variants remain separate even when their English display text matches. Equal words at different coordinates are not merged. The local ignored catalog preserves source segments, ordered control words, offsets/reserved/padding metadata, message word count, source hash, and each source occurrence. The committed translation file references the stable coordinate plus variant hash and preserves control events as ordered segments.
+
+The 721-species glossary is keyed by National Pokédex number and English lookup name. Current Cyrillic spellings come from Bulbapedia and carry a separate CC BY-NC-SA 2.5 attribution/license; they are not covered by the repository's WTFPL code/documentation license. Other terminology entries carry explicit established/provisional/research-needed states.
 
 ## Effective resources
 
-Base and update trees remain separate. The effective manifest records each path's provider and hash. Update replacement precedence is not considered established until checked against AzaharPlus 2126.2-A and both X/Y titles. The local AzaharPlus user-data path is `%APPDATA%\\AzaharPlus`; X/Y-specific update precedence is still unverified.
+Base and update trees remain separate. The effective manifest records each path's provider and hash. Owner runtime tests confirmed the update-1.5 `a/0/7/4` LayeredFS replacement is loaded in both X and Y. The update contains no `a/0/8/2`; that script archive therefore has only a base candidate, though its actual open path has not been independently traced in the running game. Other resource precedence remains unverified. The local AzaharPlus user-data path is `%APPDATA%\\AzaharPlus`.
