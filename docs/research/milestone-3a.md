@@ -4,7 +4,7 @@ Date: 2026-11-19. Generated test resources remain under ignored `build/`; source
 
 ## Confirmed runtime baseline
 
-The project owner confirmed that both Pokémon X and Pokémon Y display `Привет!` correctly on the initial language-selection screen in AzaharPlus 2126.2-A with update 1.5 active and the LayeredFS patch installed. This verifies those five Cyrillic letters plus `!` in both games. It does not establish complete Cyrillic coverage, Ё/ё support, special-character support, or line layout. The glyph-coverage variant has since been installed, but has not been launched.
+The project owner confirmed that both Pokémon X and Pokémon Y display `Привет!` correctly on the initial language-selection screen in AzaharPlus 2126.2-A with update 1.5 active and the LayeredFS patch installed. This verifies those five Cyrillic letters plus `!` in both games.
 
 ## Static CFNT and CWDH findings
 
@@ -44,7 +44,7 @@ The validation helpers report missing CMAP mappings and enforce configured BMP/U
 
 `python -m unittest discover -s tests -v`: 17 tests passed, including inclusive CMAP bounds, CWDH advance and alternate-glyph lookup, full alphabet fixture coverage, unmapped-glyph reporting, text unit/line constraints, and replacement-message control preservation. `python scripts/build_render_validation.py` built four valid archives with the hashes above. No full translation extraction or bulk translation has begun.
 
-## Glyph-coverage installation record and rollback
+## Glyph-coverage installation record
 
 On 2026-11-19 the verified glyph-coverage files were installed only at:
 
@@ -53,7 +53,7 @@ On 2026-11-19 the verified glyph-coverage files were installed only at:
 
 Both installed files are 2,388,612 bytes with SHA-256 `f05cbd20ebdc2beb1d438d6b82a6ff61ccdd183ee41b12b208ced7be0d1e791c`. The previous Russian probes are backed up in ignored `build/milestone-3a/install-backups/20261119T185929Z/` as `pokemon-x-a074.before-glyph-test` and `pokemon-y-a074.before-glyph-test`; each backup hash is `d2fbd6bebd5b7764b2e4ec2077d7f3ed7cbc343dc60bf3b1b73933db24c572fa`.
 
-AzaharPlus was not launched during installation. Inspect the initial language-selection screen's large help/information panel (the panel on the right in the supplied screenshot). The glyph test replaces that panel's instructions; it does not replace the language buttons, `Play Pokémon X/Y in` header, or bottom-right version label. Test X and Y separately with update 1.5 enabled. The long-text variant is not installed.
+AzaharPlus was not launched during installation. The glyph target was the initial language-selection screen's large right-side help/information panel. The test replaces that panel's instructions; it does not replace the language buttons, `Play Pokémon X/Y in` header, or bottom-right version label.
 
 To restore the previous Russian probes, close AzaharPlus and run this from the project root:
 
@@ -65,7 +65,27 @@ Copy-Item -LiteralPath (Join-Path $backup 'pokemon-x-a074.before-glyph-test') -D
 Copy-Item -LiteralPath (Join-Path $backup 'pokemon-y-a074.before-glyph-test') -Destination $yTarget -Force
 ```
 
-This restores only the two test archive files. The exact test sequence, character checklist, and long-text variant instructions are in [the AzaharPlus Milestone 3A test plan](../testing/azaharplus.md). Never install both variants at once.
+This restores only the two test archive files. The original glyph test install and rollback sequence is retained in [the AzaharPlus Milestone 3A test plan](../testing/azaharplus.md).
+
+## Owner-confirmed glyph results
+
+The owner tested the glyph-coverage variant in both games and confirmed all 33 uppercase and all 33 lowercase Russian letters render, including Ё/ё. Record Pokémon X and Pokémon Y separately as **alphabet coverage passed**. The punctuation row crowds into the red `Цифры:` label in both screenshots. Symbol spacing and full layout remain unverified; this crowding does not mean the alphabet glyphs failed.
+
+## Long-text installation record and rollback
+
+After reporting the glyph results, the owner installed the long-text variant for the next test. Both current targets are the same `a/0/7/4` files under the X/Y base Title ID folders listed above. Installed hash: `092ee4b69a085867f2547f780ff13af19826d70ab3a8b0963bd834fa01f8ab61`; size: 2,389,076 bytes. The glyph-coverage files were backed up at `build/milestone-3a/install-backups/20261119T190332Z/` as `pokemon-x-a074.before-long-text` and `pokemon-y-a074.before-long-text`; each backup hash is `f05cbd20ebdc2beb1d438d6b82a6ff61ccdd183ee41b12b208ced7be0d1e791c`.
+
+AzaharPlus was not launched during this replacement. To restore the glyph-coverage variant, close AzaharPlus and run from the project root:
+
+```powershell
+$backup = Join-Path (Get-Location) 'build\milestone-3a\install-backups\20261119T190332Z'
+$xTarget = Join-Path $env:APPDATA 'AzaharPlus\load\mods\0004000000055D00\romfs\a\0\7\4'
+$yTarget = Join-Path $env:APPDATA 'AzaharPlus\load\mods\0004000000055E00\romfs\a\0\7\4'
+Copy-Item -LiteralPath (Join-Path $backup 'pokemon-x-a074.before-long-text') -Destination $xTarget -Force
+Copy-Item -LiteralPath (Join-Path $backup 'pokemon-y-a074.before-long-text') -Destination $yTarget -Force
+```
+
+The long-text variant targets message 1 in member 85/0 of update 1.5 `a/0/7/4`, visible in the same right-side information panel. The owner should launch X and Y separately and report horizontal wrapping, clipping, panel scrolling, vertical overflow, and any control-code styling issues. No long-text runtime result is claimed. Do not begin bulk translation until these layout results are recorded.
 
 ## Next work after runtime confirmation
 

@@ -124,16 +124,16 @@ Copy-Item -LiteralPath (Join-Path $backup 'pokemon-y-a074.before-tests') -Destin
 
 This restores the two pre-test `a/0/7/4` files only. Do not copy entire RomFS folders. Preserve original assets, update data, saves, and unrelated mods.
 
-### Current installation record
+### Glyph-coverage installation record
 
-On 2026-11-19, the glyph-coverage variant was installed for both games. The current X and Y target files each hash to `f05cbd20ebdc2beb1d438d6b82a6ff61ccdd183ee41b12b208ced7be0d1e791c` and are 2,388,612 bytes. The previous Russian files were backed up in `build\milestone-3a\install-backups\20261119T185929Z\`:
+On 2026-11-19, the glyph-coverage variant was installed for both games. At that stage each target file hashed to `f05cbd20ebdc2beb1d438d6b82a6ff61ccdd183ee41b12b208ced7be0d1e791c` and was 2,388,612 bytes. The previous Russian files were backed up in `build\milestone-3a\install-backups\20261119T185929Z\`:
 
 - `pokemon-x-a074.before-glyph-test`
 - `pokemon-y-a074.before-glyph-test`
 
-Each backup hash is `d2fbd6bebd5b7764b2e4ec2077d7f3ed7cbc343dc60bf3b1b73933db24c572fa`. AzaharPlus was not launched. The target message is the large help/information panel on the right side of the initial language-selection screen; the language buttons, top `Play Pokémon X/Y in` text, and bottom-right `Ver. 1.5` are unchanged. Check the panel in X and Y separately with update 1.5 enabled. The long-text variant has not been installed.
+Each backup hash is `d2fbd6bebd5b7764b2e4ec2077d7f3ed7cbc343dc60bf3b1b73933db24c572fa`. AzaharPlus was not launched by the project. The owner later tested both games and confirmed all uppercase/lowercase Russian letters, including Ё/ё, render. The punctuation row crowds into the red `Цифры:` label. Symbol spacing and layout remain unverified.
 
-To restore the previous Russian probes, close AzaharPlus and run from the project root:
+To restore the previous Russian probes directly, close AzaharPlus and run from the project root:
 
 ```powershell
 $backup = Join-Path (Get-Location) 'build\milestone-3a\install-backups\20261119T185929Z'
@@ -142,3 +142,22 @@ $yTarget = Join-Path $env:APPDATA 'AzaharPlus\load\mods\0004000000055E00\romfs\a
 Copy-Item -LiteralPath (Join-Path $backup 'pokemon-x-a074.before-glyph-test') -Destination $xTarget -Force
 Copy-Item -LiteralPath (Join-Path $backup 'pokemon-y-a074.before-glyph-test') -Destination $yTarget -Force
 ```
+
+### Current long-text installation
+
+On 2026-11-19, the long-text variant replaced the glyph-coverage files at the same X and Y targets. Both current files hash to `092ee4b69a085867f2547f780ff13af19826d70ab3a8b0963bd834fa01f8ab61` and are 2,389,076 bytes. The glyph-coverage files are backed up at `build\milestone-3a\install-backups\20261119T190332Z\`:
+
+- `pokemon-x-a074.before-long-text`
+- `pokemon-y-a074.before-long-text`
+
+Each backup hash is `f05cbd20ebdc2beb1d438d6b82a6ff61ccdd183ee41b12b208ced7be0d1e791c`. Restore those glyph-coverage files by closing AzaharPlus and copying the backups to the targets:
+
+```powershell
+$backup = Join-Path (Get-Location) 'build\milestone-3a\install-backups\20261119T190332Z'
+$xTarget = Join-Path $env:APPDATA 'AzaharPlus\load\mods\0004000000055D00\romfs\a\0\7\4'
+$yTarget = Join-Path $env:APPDATA 'AzaharPlus\load\mods\0004000000055E00\romfs\a\0\7\4'
+Copy-Item -LiteralPath (Join-Path $backup 'pokemon-x-a074.before-long-text') -Destination $xTarget -Force
+Copy-Item -LiteralPath (Join-Path $backup 'pokemon-y-a074.before-long-text') -Destination $yTarget -Force
+```
+
+AzaharPlus was not launched for this replacement. The message is in the large right-side help/information panel on the initial language-selection screen. The long-text runtime result is pending owner testing in X and Y with update 1.5 active. Report automatic wrapping, clipping, panel scroll behavior, lower-line visibility, and control-code styling separately for each game. Do not begin bulk translation yet.
