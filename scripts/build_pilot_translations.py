@@ -14,18 +14,33 @@ from src.translation.catalog import read_jsonl, write_jsonl
 
 # Each entry supplies Russian text segments in the exact order of source text segments.
 DRAFTS = {
-    "gen6:a/0/8/2:0055/00:00010": ["Доброе утро, ", "!", "Хорошо спалось?", "Ты отдохнул после переезда?"],
+    "gen6:a/0/8/2:0055/00:00010": ["Доброе утро, ", "!", "Хорошо спалось?", "Удалось отдохнуть после переезда?"],
     "gen6:a/0/8/2:0055/00:00013": ["Пора тебе собираться!", "Почему бы тебе не выйти и не поздороваться с", "соседями?"],
     "gen6:a/0/8/2:0057/00:00001": ["Добро пожаловать в Ванивилл!", "Меня зовут Серена.", "Я твоя соседка."],
     "gen6:a/0/8/2:0057/00:00002": ["Добро пожаловать в Ванивилл!", "Меня зовут Калем.", "Я живу по соседству."],
-    "gen6:a/0/8/2:0057/00:00003": ["А я Шауна!", "Рада знакомству!", "Угадайте что!", "Мы пришли за тобой!"],
+    "gen6:a/0/8/2:0057/00:00003": ["А я Шауна!", "Приятно познакомиться!", "А знаешь что?", "Мы пришли за тобой!"],
     "gen6:a/0/8/2:0057/00:00006": ["Будем ждать тебя в соседнем городе!", "И знаешь что?!", "Мы получим... покемона!", "Скорее! Пойдём!"],
     "gen6:a/0/7/4:0075/00:00000": ["НАСТРОЙКИ"],
     "gen6:a/0/7/4:0075/00:00003": ["СКОРОСТЬ ТЕКСТА"],
     "gen6:a/0/7/4:0075/00:00004": ["МЕДЛЕННО"],
-    "gen6:a/0/7/4:0075/00:00005": ["ОБЫЧНО"],
+    "gen6:a/0/7/4:0075/00:00005": ["НОРМАЛЬНО"],
     "gen6:a/0/7/4:0075/00:00006": ["БЫСТРО"],
     "gen6:a/0/7/4:0075/00:00007": ["Можно выбрать одну из трёх скоростей прокрутки текста", "чтобы настроить, как быстро появляются сообщения."],
+}
+
+REVIEW_NOTES = {
+    "gen6:a/0/8/2:0055/00:00010": "Rephrased the final question to avoid assuming the player's grammatical gender.",
+    "gen6:a/0/8/2:0055/00:00013": "Natural conversational send-off; original line breaks and clear event are retained.",
+    "gen6:a/0/8/2:0057/00:00001": "Provisional place and character spellings; retain the source line/control order.",
+    "gen6:a/0/8/2:0057/00:00002": "Provisional place and character spellings; masculine speaker agreement is appropriate for Calem.",
+    "gen6:a/0/8/2:0057/00:00003": "Reworded the idiom for natural spoken Russian; place/character naming remains provisional.",
+    "gen6:a/0/8/2:0057/00:00006": "Retains the three-beat announcement and the source's two clear events.",
+    "gen6:a/0/7/4:0075/00:00000": "Compact uppercase menu label; confirm fit in the target UI.",
+    "gen6:a/0/7/4:0075/00:00003": "Compact uppercase settings label; confirm fit in the target UI.",
+    "gen6:a/0/7/4:0075/00:00004": "Imperative/adverb label matches the speed option group.",
+    "gen6:a/0/7/4:0075/00:00005": "Uses the standard normal-speed label rather than an ambiguous adverb.",
+    "gen6:a/0/7/4:0075/00:00006": "Imperative/adverb label matches the speed option group.",
+    "gen6:a/0/7/4:0075/00:00007": "Preserves the source line break; text width still needs runtime inspection.",
 }
 
 
@@ -69,6 +84,8 @@ def main() -> int:
             "version_scope": versions,
             "translation_segments": segments,
             "status": "machine_draft",
+            "review_state": "assistant_reviewed_pending_human",
+            "review_note": REVIEW_NOTES[record_id],
             "context": "early-game dialogue" if "/8/2:" in record_id else "Options screen",
         })
     write_jsonl(args.output.resolve(), translations)
