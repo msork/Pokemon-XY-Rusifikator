@@ -2,6 +2,7 @@ import struct
 import unittest
 
 from scripts.build_render_validation import GLYPH_SPANS, make_control_preserving_body, split_visible_spans
+from scripts.build_text_length_matrix import extend_first_span, extend_total
 from src.extraction.fonts import cmap_blocks, font_metrics
 from src.extraction.messages import TextFile, _rol16
 from src.validation.text_constraints import TextConstraintError, analyze_text, enforce_text_limits
@@ -97,12 +98,28 @@ class ValidationTests(unittest.TestCase):
         spans, controls = split_visible_spans(line)
         self.assertEqual(spans, ["", "A", "", "B", "C", "D"])
         self.assertEqual(len(controls), 5)
+        self.assertIn((0x0010, 2, 0xFF00, 0), controls)
         replacement_spans = ("1", "2", "", "3", "4", "5")
         body = make_control_preserving_body(line, replacement_spans)
         rebuilt = TextFile.parse(text.rebuild({0: body}))
         self.assertEqual(rebuilt.lines[0].tokens, line.tokens)
         for character in "12345":
             self.assertIn(character, rebuilt.lines[0].display_text)
+
+    def test_length_matrix_changes_only_the_intended_text(self):
+        short = extend_total(GLYPH_SPANS, sum(map(len, GLYPH_SPANS)) + 39)
+        longer = extend_total(GLYPH_SPANS, sum(map(len, GLYPH_SPANS)) + 79)
+        self.assertEqual(sum(map(len, short)) + 40, sum(map(len, longer)))
+        self.assertEqual(len(short), len(GLYPH_SPANS))
+        self.assertEqual(len(longer), len(GLYPH_SPANS))
+        self.assertTrue(all(b.startswith(a) for a, b in zip(short, longer)))
+        self.assertTrue(all(set(b[len(a):]) <= {"я"} for a, b in zip(GLYPH_SPANS, short)))
+
+        line_probe = extend_first_span(GLYPH_SPANS, 75)
+        self.assertEqual(len(line_probe[0]), 75)
+        self.assertEqual(line_probe[1:], GLYPH_SPANS[1:])
+        with self.assertRaises(ValueError):
+            extend_total(GLYPH_SPANS, sum(map(len, GLYPH_SPANS)) - 1)
 
 
 if __name__ == "__main__":

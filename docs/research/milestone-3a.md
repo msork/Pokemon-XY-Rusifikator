@@ -87,6 +87,37 @@ Copy-Item -LiteralPath (Join-Path $backup 'pokemon-y-a074.before-long-text') -De
 
 The long-text variant targets message 1 in member 85/0 of update 1.5 `a/0/7/4`, visible in the same right-side information panel. The owner should launch X and Y separately and report horizontal wrapping, clipping, panel scrolling, vertical overflow, and any control-code styling issues. No long-text runtime result is claimed. Do not begin bulk translation until these layout results are recorded.
 
+## Long-text blank-panel investigation
+
+The project owner later tested the installed `long-text` variant in Pokémon X and Pokémon Y with update 1.5 active. In both games, the right-side information panel was completely blank while the language buttons and version label remained visible. This is an owner-reported runtime failure; the project did not launch AzaharPlus during this investigation. The previously confirmed `glyph-coverage` variant rendered Russian in both games.
+
+The two generated archives were compared at `a/0/7/4`, GARC member 85/0, message 1:
+
+| Property | Confirmed glyph variant | Blank-panel long variant |
+|---|---:|---:|
+| Archive SHA-256 | `f05cbd20ebdc2beb1d438d6b82a6ff61ccdd183ee41b12b208ced7be0d1e791c` | `092ee4b69a085867f2547f780ff13af19826d70ab3a8b0963bd834fa01f8ab61` |
+| Archive size | 2,388,612 bytes | 2,389,076 bytes |
+| Target TextFile member size | 2,752 bytes | 3,216 bytes |
+| Message 1 offset / reserved field | 468 / 4 | 468 / 4 |
+| Message 1 record length | 295 words | 527 words |
+| Visible replacement characters | 211 | 443 |
+| Longest explicit span | 39 characters | 103 characters |
+| Control events / encoded control words | 9 / 15 | 9 / 15 |
+
+The message IDs, target offset, reserved field, and raw control-event sequence are identical. Both include the same newline events and the two `0x0010`/`0xFF00` variables with their original arguments. The changed ciphertext is expected because the message contents and word count changed; the message encryption starts from the same per-message key. The TextFile section size and subsequent message offsets are recomputed, and the target record grows by exactly 232 words (464 bytes). All 150 non-target GARC members remain byte-identical in each build. No encoding, compression, GARC membership, or control-format difference was found that explains the runtime result.
+
+This comparison does **not** prove a text-length limit. The 527-word record is below the TextFile format's 16-bit per-record length capacity, but that storage bound does not establish the game's runtime renderer's buffer or layout limit. The public [pkNX TextFile implementation](https://github.com/kwsch/pkNX/blob/master/pkNX.Structures/Text/TextFile.cs#L57-L100) independently models per-line lengths as 16-bit values and the same Gen VI word encryption; it documents the container-level representation, not Pokémon X/Y's runtime UI limits. No public game-engine source or authoritative screen-specific maximum has been identified. The cause remains unresolved among total record size, line width, cumulative rendered lines, fallback-font metrics, or an additional engine-specific condition.
+
+The comparison also prompted a serializer audit: `0x0000` appears as an argument inside the second `0xFF00` control sequence, as well as at the true end of the record. Current test generation preserves the raw control sequence and appends the source suffix, and round-trip checks prove the output remains parseable. The new matrix validator compares the complete raw control tuples (including arguments), rather than relying only on the human-readable token summary. This shared serialization behavior is present in both the known-working glyph artifact and the failed long artifact, so it does not by itself explain their different owner-reported result.
+
+### Reproducible controlled matrix
+
+Run `python scripts/build_text_length_matrix.py` to recreate ignored outputs under `build/milestone-3a/length-matrix/` and `matrix-report.json`. Every variant is built independently for X and Y from the same update 1.5 source, uses the same ten printable spans and exact raw control sequence as the known-working glyph variant, preserves the other 150 GARC members, reparses the rebuilt GARC/TextFile, and checks every other TextFile message's decoded/encrypted words, reserved field, and padding. X/Y outputs are separate, although the verified inputs currently produce identical hashes.
+
+The total-record axis uses 295, 350, 400, 450, 480, 500, 512, and 527 decoded words. The first variant is the known glyph-coverage baseline and is expected to reproduce hash `f05cbd20...791c`. Later variants append only the same Russian `я` filler, distributed across existing nonempty spans; all line breaks and control positions remain fixed. The 512/527 pair tests around a plausible but unverified boundary. A second axis independently extends only the first span to 43, 58, 75, and 103 characters while all other spans and controls remain fixed. Each output has its own variant directory and hash in the generated report.
+
+**Recommended first runtime test:** install and check `record-350-words` in X and Y separately, with update 1.5 enabled. It adds 55 Russian characters to the known-working 295-word baseline while retaining the identical formatting, and its longest span is 46 characters. If it renders, proceed in order through 400, 450, 480, 500, 512, and 527 words, changing only the test archive between runs. If a total-record variant fails, test the line-width axis separately to see whether one long explicit span reproduces the blank panel at a much smaller total record size. Record the panel state and visible lines per game. Do not launch or install any of these variants as part of this investigation, and do not begin bulk translation yet.
+
 ## Next work after runtime confirmation
 
 Record glyph-by-glyph results separately for X and Y, and note visual substitution, line wrapping, clipping, missing glyphs, and overflow. If coverage and layout are acceptable, proceed to a translation data pipeline: stable per-member message IDs, shared X/Y records with contextual overrides, source hashes, exact control-token metadata, glossary/translation-memory checks, and untranslated/draft/reviewed/validated/tested states. Keep translation drafts in project-authored files and do not send copyrighted source strings to external services without explicit approval. Do not start bulk translation until the glyph and text-layout report is complete.
