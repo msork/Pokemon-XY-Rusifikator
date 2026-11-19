@@ -122,4 +122,23 @@ Copy-Item -LiteralPath (Join-Path $backup 'pokemon-x-a074.before-tests') -Destin
 Copy-Item -LiteralPath (Join-Path $backup 'pokemon-y-a074.before-tests') -Destination $yTarget -Force
 ```
 
-This restores the two pre-test `a/0/7/4` files only. Do not copy entire RomFS folders. Preserve original assets, update data, saves, and unrelated mods. No Milestone 3A test patch has been installed by the project.
+This restores the two pre-test `a/0/7/4` files only. Do not copy entire RomFS folders. Preserve original assets, update data, saves, and unrelated mods.
+
+### Current installation record
+
+On 2026-11-19, the glyph-coverage variant was installed for both games. The current X and Y target files each hash to `f05cbd20ebdc2beb1d438d6b82a6ff61ccdd183ee41b12b208ced7be0d1e791c` and are 2,388,612 bytes. The previous Russian files were backed up in `build\milestone-3a\install-backups\20261119T185929Z\`:
+
+- `pokemon-x-a074.before-glyph-test`
+- `pokemon-y-a074.before-glyph-test`
+
+Each backup hash is `d2fbd6bebd5b7764b2e4ec2077d7f3ed7cbc343dc60bf3b1b73933db24c572fa`. AzaharPlus was not launched. The target message is the large help/information panel on the right side of the initial language-selection screen; the language buttons, top `Play Pokémon X/Y in` text, and bottom-right `Ver. 1.5` are unchanged. Check the panel in X and Y separately with update 1.5 enabled. The long-text variant has not been installed.
+
+To restore the previous Russian probes, close AzaharPlus and run from the project root:
+
+```powershell
+$backup = Join-Path (Get-Location) 'build\milestone-3a\install-backups\20261119T185929Z'
+$xTarget = Join-Path $env:APPDATA 'AzaharPlus\load\mods\0004000000055D00\romfs\a\0\7\4'
+$yTarget = Join-Path $env:APPDATA 'AzaharPlus\load\mods\0004000000055E00\romfs\a\0\7\4'
+Copy-Item -LiteralPath (Join-Path $backup 'pokemon-x-a074.before-glyph-test') -Destination $xTarget -Force
+Copy-Item -LiteralPath (Join-Path $backup 'pokemon-y-a074.before-glyph-test') -Destination $yTarget -Force
+```
