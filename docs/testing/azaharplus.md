@@ -143,9 +143,9 @@ Copy-Item -LiteralPath (Join-Path $backup 'pokemon-x-a074.before-glyph-test') -D
 Copy-Item -LiteralPath (Join-Path $backup 'pokemon-y-a074.before-glyph-test') -Destination $yTarget -Force
 ```
 
-### Current long-text installation
+### Previous long-text installation (superseded)
 
-On 2026-11-19, the long-text variant replaced the glyph-coverage files at the same X and Y targets. Both current files hash to `092ee4b69a085867f2547f780ff13af19826d70ab3a8b0963bd834fa01f8ab61` and are 2,389,076 bytes. The glyph-coverage files are backed up at `build\milestone-3a\install-backups\20261119T190332Z\`:
+On 2026-11-19, the long-text variant replaced the glyph-coverage files at the same X and Y targets. At that time, both files hashed to `092ee4b69a085867f2547f780ff13af19826d70ab3a8b0963bd834fa01f8ab61` and were 2,389,076 bytes. The glyph-coverage files were backed up at `build\milestone-3a\install-backups\20261119T190332Z\`:
 
 - `pokemon-x-a074.before-long-text`
 - `pokemon-y-a074.before-long-text`
@@ -160,7 +160,7 @@ Copy-Item -LiteralPath (Join-Path $backup 'pokemon-x-a074.before-long-text') -De
 Copy-Item -LiteralPath (Join-Path $backup 'pokemon-y-a074.before-long-text') -Destination $yTarget -Force
 ```
 
-AzaharPlus was not launched for this replacement. The message is in the large right-side help/information panel on the initial language-selection screen. The long-text runtime result is pending owner testing in X and Y with update 1.5 active. Report automatic wrapping, clipping, panel scroll behavior, lower-line visibility, and control-code styling separately for each game. Do not begin bulk translation yet.
+AzaharPlus was not launched for this replacement. The owner later reported that this variant makes the panel blank in both games; see the investigation below.
 
 ### Long-text blank-panel result and controlled follow-up
 
@@ -168,4 +168,28 @@ The owner reports that the long-text variant made the right-side information pan
 
 The long variant and working glyph artifact target the same update 1.5 resource, GARC member 85/0, message 1. Both have identical message offset 468, reserved field 4, nine raw control events (15 encoded words), and unchanged non-target GARC members. The target record is 295 words / 2,752 member bytes in the working artifact and 527 words / 3,216 member bytes in the blank-panel artifact. Visible replacement text is 211 versus 443 characters, with maximum explicit span 39 versus 103. Header section lengths and later message offsets were adjusted for the longer record. The evidence points to a length/layout interaction for testing, but does not establish a runtime limit or cause.
 
-Recreate a no-install test matrix by running `python scripts/build_text_length_matrix.py`. Outputs and SHA-256 values are under ignored `build/milestone-3a/length-matrix/`; the complete manifest is `matrix-report.json`. Test `record-350-words` first in each game, then progress through 400, 450, 480, 500, 512, and 527 words. These variants extend the known-working glyph text using the same filler across the same existing text spans, preserving the line/control layout. Test the separate `line-0-43-chars`, `line-0-58-chars`, `line-0-75-chars`, and `line-0-103-chars` axis afterward if the record-size axis indicates a failure threshold. These change only the first explicit text span and leave every other span fixed. Test X and Y separately with update 1.5 active; record blank/nonblank status and visible lines for each run. Do not install or launch any matrix output without a separately authorized owner test step. See [the structural comparison and investigation notes](../research/milestone-3a.md#long-text-blank-panel-investigation).
+Recreate the full matrix with `python scripts/build_text_length_matrix.py`. Only `record-350-words` is currently installed. The remaining variants are still uninstalled. See [the structural comparison and investigation notes](../research/milestone-3a.md#long-text-blank-panel-investigation).
+
+### Current record-350 installation and rollback
+
+On 2026-11-19, the `record-350-words` archive replaced the long-text file at each title-specific target. Both targets are 2,388,724 bytes and currently hash to `c9e9914f04f57cd2e4f38d2ef5ab6eaa0983f7fe0a11d1dbc59dc9ece9c39e20`:
+
+- X: `%APPDATA%\AzaharPlus\load\mods\0004000000055D00\romfs\a\0\7\4`
+- Y: `%APPDATA%\AzaharPlus\load\mods\0004000000055E00\romfs\a\0\7\4`
+
+The replaced long-text archives are backed up at `build\milestone-3a\install-backups\20261119T191931Z\`:
+
+- `pokemon-x-a074.before-record-350-words`
+- `pokemon-y-a074.before-record-350-words`
+
+Each backup is 2,389,076 bytes and hashes to `092ee4b69a085867f2547f780ff13af19826d70ab3a8b0963bd834fa01f8ab61`. Restore them by closing AzaharPlus and running from the project root:
+
+```powershell
+$backup = Join-Path (Get-Location) 'build\milestone-3a\install-backups\20261119T191931Z'
+$xTarget = Join-Path $env:APPDATA 'AzaharPlus\load\mods\0004000000055D00\romfs\a\0\7\4'
+$yTarget = Join-Path $env:APPDATA 'AzaharPlus\load\mods\0004000000055E00\romfs\a\0\7\4'
+Copy-Item -LiteralPath (Join-Path $backup 'pokemon-x-a074.before-record-350-words') -Destination $xTarget -Force
+Copy-Item -LiteralPath (Join-Path $backup 'pokemon-y-a074.before-record-350-words') -Destination $yTarget -Force
+```
+
+The target message is shown in the right-side information panel on the initial language-selection screen. The project did not launch AzaharPlus. Owner runtime testing is now requested for X and Y separately with update 1.5 enabled; report whether the panel renders, any visible lines, clipping, and whether the result differs by game. Do not install other matrix variants or begin bulk translation yet.

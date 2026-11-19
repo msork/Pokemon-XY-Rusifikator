@@ -73,7 +73,7 @@ The owner tested the glyph-coverage variant in both games and confirmed all 33 u
 
 ## Long-text installation record and rollback
 
-After reporting the glyph results, the owner installed the long-text variant for the next test. Both current targets are the same `a/0/7/4` files under the X/Y base Title ID folders listed above. Installed hash: `092ee4b69a085867f2547f780ff13af19826d70ab3a8b0963bd834fa01f8ab61`; size: 2,389,076 bytes. The glyph-coverage files were backed up at `build/milestone-3a/install-backups/20261119T190332Z/` as `pokemon-x-a074.before-long-text` and `pokemon-y-a074.before-long-text`; each backup hash is `f05cbd20ebdc2beb1d438d6b82a6ff61ccdd183ee41b12b208ced7be0d1e791c`.
+After reporting the glyph results, the owner installed the long-text variant for the next test. At that stage, both targets were the same `a/0/7/4` files under the X/Y base Title ID folders listed above. Installed hash: `092ee4b69a085867f2547f780ff13af19826d70ab3a8b0963bd834fa01f8ab61`; size: 2,389,076 bytes. The glyph-coverage files were backed up at `build/milestone-3a/install-backups/20261119T190332Z/` as `pokemon-x-a074.before-long-text` and `pokemon-y-a074.before-long-text`; each backup hash is `f05cbd20ebdc2beb1d438d6b82a6ff61ccdd183ee41b12b208ced7be0d1e791c`. This installation was later superseded by the controlled 350-word test below.
 
 AzaharPlus was not launched during this replacement. To restore the glyph-coverage variant, close AzaharPlus and run from the project root:
 
@@ -85,7 +85,33 @@ Copy-Item -LiteralPath (Join-Path $backup 'pokemon-x-a074.before-long-text') -De
 Copy-Item -LiteralPath (Join-Path $backup 'pokemon-y-a074.before-long-text') -Destination $yTarget -Force
 ```
 
-The long-text variant targets message 1 in member 85/0 of update 1.5 `a/0/7/4`, visible in the same right-side information panel. The owner should launch X and Y separately and report horizontal wrapping, clipping, panel scrolling, vertical overflow, and any control-code styling issues. No long-text runtime result is claimed. Do not begin bulk translation until these layout results are recorded.
+The long-text variant targets message 1 in member 85/0 of update 1.5 `a/0/7/4`, visible in the same right-side information panel. The owner later reported that this variant made the panel blank in both games; see the investigation below. Do not begin bulk translation yet.
+
+## Controlled record-350 installation and rollback
+
+On 2026-11-19, the regenerated matrix's `record-350-words` variant was installed for the next owner runtime check. Before replacement, both installed files matched the expected long-text archive hash `092ee4b69a085867f2547f780ff13af19826d70ab3a8b0963bd834fa01f8ab61`. The previous files were backed up under ignored `build/milestone-3a/install-backups/20261119T191931Z/`:
+
+- `pokemon-x-a074.before-record-350-words`
+- `pokemon-y-a074.before-record-350-words`
+
+Each backup is 2,389,076 bytes and hashes to `092ee4b69a085867f2547f780ff13af19826d70ab3a8b0963bd834fa01f8ab61`.
+
+The installed X and Y files are each 2,388,724 bytes and hash to `c9e9914f04f57cd2e4f38d2ef5ab6eaa0983f7fe0a11d1dbc59dc9ece9c39e20`. They replace only these LayeredFS targets:
+
+- X: `%APPDATA%\AzaharPlus\load\mods\0004000000055D00\romfs\a\0\7\4`
+- Y: `%APPDATA%\AzaharPlus\load\mods\0004000000055E00\romfs\a\0\7\4`
+
+The generated archives were checked against `matrix-report.json`; each target has GARC member 85/0, message ID 1, 350 UTF-16 words, and the exact nine raw control events from the update source. All 150 unrelated members are unchanged. AzaharPlus was not launched. To restore the prior long-text files, close AzaharPlus and run from the project root:
+
+```powershell
+$backup = Join-Path (Get-Location) 'build\milestone-3a\install-backups\20261119T191931Z'
+$xTarget = Join-Path $env:APPDATA 'AzaharPlus\load\mods\0004000000055D00\romfs\a\0\7\4'
+$yTarget = Join-Path $env:APPDATA 'AzaharPlus\load\mods\0004000000055E00\romfs\a\0\7\4'
+Copy-Item -LiteralPath (Join-Path $backup 'pokemon-x-a074.before-record-350-words') -Destination $xTarget -Force
+Copy-Item -LiteralPath (Join-Path $backup 'pokemon-y-a074.before-record-350-words') -Destination $yTarget -Force
+```
+
+After copying, verify both target hashes equal the long-text backup hash above. The project has not tested this variant at runtime; owner testing in X and Y is pending.
 
 ## Long-text blank-panel investigation
 
