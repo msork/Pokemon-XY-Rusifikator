@@ -42,7 +42,7 @@ The updates contain neither `a/0/8/2` nor `a/1/8/5`, so these candidates resolve
 
 The ten font members in X and Y are identical by SHA-256. They have `CFNT` signature and little-endian byte-order marker. The map tables structurally decode to Latin, kana, Hangul, full-width forms, and punctuation ranges. Across all ten members, no mapped codepoint falls in U+0400–U+052F; U+0401 Ё and U+0451 ё are both absent. This establishes that the existing candidate game fonts do not provide Cyrillic mappings. It does not establish whether AzaharPlus can supply missing glyphs through a system-font fallback or other rendering feature. No font was modified, and no Cyrillic runtime rendering test has been performed.
 
-Mapped-codepoint counts by font member are 3,302, 2,846, 2,830, and 31 for each of the seven small variants. The seven variants have some differences in their codepoint sets; all are missing Cyrillic.
+The initial Milestone 2A scanner treated `codeEnd` as exclusive for direct/table CMAP methods and undercounted some mappings. Milestone 3A corrected this to the inclusive end used by libctru's `fontGlyphIndexFromCodePoint` lookup. Corrected mapped-codepoint counts are 3,312, 2,855, 2,834, and 31 for each of the seven small variants. All ten fonts still lack U+0400-U+052F, including U+0401 and U+0451. Character advances come from the CWDH width records; see [Milestone 3A findings](milestone-3a.md) for the line-width caveats. Format references: [libctru CMAP lookup and CWDH width access](https://github.com/devkitPro/libctru/blob/master/libctru/source/font.c#L558-L673).
 
 ## Tooling research and licensing
 

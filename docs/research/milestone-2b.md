@@ -22,9 +22,9 @@ Correction from Milestone 2C: the `Ver. 1.5` message replaced here at member 35/
 
 ## Font and fallback investigation
 
-All 10 candidate CFNTs lack mappings for U+0400 through U+052F, including U+0401 and U+0451. Their CMAP tables map Latin, kana, Hangul, full-width forms, and punctuation. AzaharPlus 2126.2-A release notes do not describe game-font fallback. Since game text is resolved to the game's own CFNT glyph mapping, emulator UI support or bundled FreeType/FriBidi DLLs do not establish in-game glyph support. A run with the proof patch is still required to determine whether AzaharPlus substitutes missing glyphs for this title.
+All 10 candidate CFNTs lack mappings for U+0400 through U+052F, including U+0401 and U+0451. Their CMAP tables map Latin, kana, Hangul, full-width forms, and punctuation. Subsequent user-confirmed AzaharPlus runtime testing showed `Привет!` correctly in both games despite those static map gaps. The display result demonstrates that a runtime fallback or another glyph source supplies at least the glyphs used by that test; its exact source and complete coverage are still unknown. Emulator UI support or bundled FreeType/FriBidi DLLs alone would not establish in-game support, but this specific X/Y runtime result does establish the seven tested characters for this build.
 
-If the test displays replacement boxes or a default glyph, the next implementation choice is to add glyph bitmaps and widths to the appropriate CFNT glyph sheet and extend its CWDH/CMAP structures, or to repurpose existing unused glyph slots if any are verified. No font modification has been attempted; font atlas sizing, texture alignment, and actual X/Y font selection remain open.
+No font modification has been attempted. A CFNT change should be considered only if the full character matrix exposes missing glyphs or bad widths. Font atlas sizing, texture alignment, and actual X/Y font selection remain open.
 
 ## Update and LayeredFS evidence
 

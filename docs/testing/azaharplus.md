@@ -57,4 +57,69 @@ After LayeredFS is confirmed, test uppercase and lowercase Cyrillic, Ё/ё, punc
 
 On 2026-11-19, only the two `a\0\7\4` mod files were replaced with the generated Russian variants. Both installed files hash to `d2fbd6bebd5b7764b2e4ec2077d7f3ed7cbc343dc60bf3b1b73933db24c572fa`. The previous ASCII controls are backed up at `build\milestone-2d\install-backups\20261119T182134Z\` and hash to `252f90a4eca1c16dac0f0a32758e867ec7b9dbb322c00f975e3d7fc6ab233d0c`. Exact paths and restore commands are in [the Milestone 2D record](../research/milestone-2d.md).
 
-AzaharPlus was not launched for this replacement. Launch Pokémon X and Pokémon Y separately with update 1.5 enabled and report whether `Привет!` renders correctly in each. Cyrillic rendering is not yet confirmed.
+AzaharPlus was not launched by the project for this replacement. The owner subsequently confirmed that `Привет!` renders correctly in both X and Y with update 1.5 enabled. See the Milestone 3A tests below for broader character and layout coverage.
+
+## Milestone 3A full glyph and layout tests
+
+The owner later confirmed that `Привет!` renders correctly in both games. This verifies only the characters in that greeting. Generated test patches target update 1.5 `a/0/7/4`, GARC member 85/0, message 1, the visible language-selection help panel:
+
+| Variant | X/Y SHA-256 | Generated target |
+|---|---|---|
+| `glyph-coverage` | `f05cbd20ebdc2beb1d438d6b82a6ff61ccdd183ee41b12b208ced7be0d1e791c` | `build/milestone-3a/glyph-coverage/<pokemon-x-or-y>/<base-title-id>/romfs/a/0/7/4` |
+| `long-text` | `092ee4b69a085867f2547f780ff13af19826d70ab3a8b0963bd834fa01f8ab61` | `build/milestone-3a/long-text/<pokemon-x-or-y>/<base-title-id>/romfs/a/0/7/4` |
+
+Each preserves the original control-code sequence, placeholders, and all 150 non-target GARC members. Build or refresh them with `python scripts/build_render_validation.py`. They are not installed automatically.
+
+### Backup current Russian files and install glyph coverage
+
+Close AzaharPlus before changing any mod file. From the project root in PowerShell, back up the currently installed Russian probes. Stop if the target files are missing or the backup path already exists:
+
+```powershell
+$backup = Join-Path (Get-Location) 'build\milestone-3a\install-backups\pre-test-russian'
+if (Test-Path -LiteralPath $backup) { throw 'Backup path already exists; choose a new directory.' }
+$xTarget = Join-Path $env:APPDATA 'AzaharPlus\load\mods\0004000000055D00\romfs\a\0\7\4'
+$yTarget = Join-Path $env:APPDATA 'AzaharPlus\load\mods\0004000000055E00\romfs\a\0\7\4'
+if (!(Test-Path -LiteralPath $xTarget) -or !(Test-Path -LiteralPath $yTarget)) { throw 'Expected current Russian test files are missing.' }
+New-Item -ItemType Directory -Force -Path $backup | Out-Null
+Copy-Item -LiteralPath $xTarget -Destination (Join-Path $backup 'pokemon-x-a074.before-tests')
+Copy-Item -LiteralPath $yTarget -Destination (Join-Path $backup 'pokemon-y-a074.before-tests')
+```
+
+Install only the `glyph-coverage` files first:
+
+```powershell
+$xSource = (Resolve-Path '.\build\milestone-3a\glyph-coverage\pokemon-x\0004000000055D00\romfs\a\0\7\4').Path
+$ySource = (Resolve-Path '.\build\milestone-3a\glyph-coverage\pokemon-y\0004000000055E00\romfs\a\0\7\4').Path
+Copy-Item -LiteralPath $xSource -Destination $xTarget -Force
+Copy-Item -LiteralPath $ySource -Destination $yTarget -Force
+certutil -hashfile $xTarget SHA256
+certutil -hashfile $yTarget SHA256
+```
+
+Both hashes must equal `f05cbd20ebdc2beb1d438d6b82a6ff61ccdd183ee41b12b208ced7be0d1e791c`. Launch X and Y separately with update 1.5 enabled, and inspect the entire help panel. Record which uppercase and lowercase letters render, specifically Ё/ё, punctuation, digits, symbols, unexpected substitutions, and clipping. Do not select or confirm a language; screenshots of the initial screen are sufficient and avoid changing game data.
+
+### Install long-text layout probe
+
+Close AzaharPlus. Replace only the same two mod files with the `long-text` outputs:
+
+```powershell
+$xSource = (Resolve-Path '.\build\milestone-3a\long-text\pokemon-x\0004000000055D00\romfs\a\0\7\4').Path
+$ySource = (Resolve-Path '.\build\milestone-3a\long-text\pokemon-y\0004000000055E00\romfs\a\0\7\4').Path
+Copy-Item -LiteralPath $xSource -Destination $xTarget -Force
+Copy-Item -LiteralPath $ySource -Destination $yTarget -Force
+certutil -hashfile $xTarget SHA256
+certutil -hashfile $yTarget SHA256
+```
+
+Both hashes must equal `092ee4b69a085867f2547f780ff13af19826d70ab3a8b0963bd834fa01f8ab61`. In each game, observe automatic horizontal wrapping, glyph clipping, line spacing, control-code color changes, whether the panel scrolls, and whether lower lines overflow or disappear. Capture the full screen for each game.
+
+### Restore the Russian greeting
+
+After capturing both test variants, close AzaharPlus and restore the backups:
+
+```powershell
+Copy-Item -LiteralPath (Join-Path $backup 'pokemon-x-a074.before-tests') -Destination $xTarget -Force
+Copy-Item -LiteralPath (Join-Path $backup 'pokemon-y-a074.before-tests') -Destination $yTarget -Force
+```
+
+This restores the two pre-test `a/0/7/4` files only. Do not copy entire RomFS folders. Preserve original assets, update data, saves, and unrelated mods. No Milestone 3A test patch has been installed by the project.

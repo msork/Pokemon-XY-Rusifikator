@@ -51,3 +51,5 @@ Test the ASCII control first. If `ASCII 2C` appears, the emulator read the patch
 - On 2026-11-18, the ASCII control archive was installed to both AzaharPlus mod targets. The installed X and Y hashes each verified as `252f90a4eca1c16dac0f0a32758e867ec7b9dbb322c00f975e3d7fc6ab233d0c`, size 2,388,484 bytes. The emulator was not launched by this operation.
 - Before replacement, the previous installed file for each title was backed up under `build/milestone-2c/install-backups/20261118T215421Z/`. Each backup hash is `ebfa2db696d0e7b2c5bcd2b6fe20527ff395e51590b605b4250f30e8ce535cae`.
 - No Cyrillic rendering or LayeredFS runtime success is claimed. Await the user's runtime observation of the ASCII control on both games.
+
+Subsequent results supersede that status: the owner confirmed `ASCII 2C` appeared in both X and Y, then confirmed `Привет!` rendered correctly in both with update 1.5 enabled. Those reports are recorded in [Milestone 2D](milestone-2d.md) and [Milestone 3A](milestone-3a.md). The broader character matrix remains untested.

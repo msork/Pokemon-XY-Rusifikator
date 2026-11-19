@@ -37,3 +37,7 @@ No source game assets, updates, saves, or unrelated mods were changed. No emulat
 ## Required user runtime check
 
 Launch X and Y separately in AzaharPlus 2126.2-A with update 1.5 enabled. Check the initial language-selection screen for `Привет!`; report the visible result for each game and provide screenshots/logs if possible. Do not interpret this as successful Cyrillic support until the glyphs are visibly correct. If glyphs render incorrectly, record whether they appear as boxes, blanks, or another substitute. After confirmation, investigate uppercase/lowercase coverage, Ё/ё, punctuation, mixed Latin/numbers, line wrapping, and fonts used by the screen before any bulk translation work.
+
+## Subsequent runtime confirmation
+
+After this installation record, the project owner confirmed that both X and Y correctly display `Привет!` in AzaharPlus 2126.2-A with update 1.5. This verifies the greeting only. Milestone 3A prepares broader glyph and layout probes; those new variants have not been installed or launched. See [Milestone 3A findings](milestone-3a.md).
