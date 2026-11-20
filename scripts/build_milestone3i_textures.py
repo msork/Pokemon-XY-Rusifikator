@@ -204,6 +204,33 @@ def build_images(*, editing_root: Path = EDITING, output_root: Path = OUTPUT,
     return result
 
 
+def validate_editing_workspace(editing_root: Path = EDITING) -> dict[str, object]:
+    """Validate the editor-exported PNG set without changing or rebuilding any files."""
+    manifest_path = editing_root / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assets = _verify_manifest(manifest)
+    results = []
+    for item in assets:
+        image = editing_root / str(item["png"])
+        width, height, rgba = read_png_rgba(image)
+        if (width, height) != (item["width"], item["height"]):
+            raise ValueError(f"Edited PNG dimensions changed for {image.name}: {width}x{height}")
+        transparent = sum(rgba[i] == 0 for i in range(3, len(rgba), 4))
+        opaque = sum(rgba[i] == 255 for i in range(3, len(rgba), 4))
+        if not transparent or not opaque:
+            raise ValueError(f"PNG alpha/transparency was flattened or erased: {image.name}")
+        if item["bclim_format"] not in (8, 9):
+            raise ValueError(f"Unexpected BCLIM format for editor target: {item['internal_filename']}")
+        current_hash = sha256(image.read_bytes())
+        results.append({"png": image.name, "resource": item["resource"], "member": item["member"],
+                        "internal_filename": item["internal_filename"], "width": width, "height": height,
+                        "bclim_format": item["bclim_format"], "rgba8": True,
+                        "transparent_pixels": transparent, "opaque_pixels": opaque,
+                        "png_sha256": current_hash,
+                        "unchanged_from_source_png": current_hash == item["source_png_sha256"]})
+    return {"set": "canonical-24", "valid": True, "assets_validated": len(results), "assets": results}
+
+
 def restore_candidate(output_root: Path = OUTPUT) -> list[str]:
     restored = []
     backup_manifest_path = output_root / "candidate-backup-manifest.json"
@@ -234,6 +261,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     modes = parser.add_mutually_exclusive_group(required=True)
     modes.add_argument("--init-editing-workspace", action="store_true")
+    modes.add_argument("--validate-editing-workspace", action="store_true")
     modes.add_argument("--backup-editing-workspace", action="store_true")
     modes.add_argument("--restore-editing-backup", type=Path)
     modes.add_argument("--dry-run", action="store_true", help="reinsert untouched original PNGs and verify byte/pixel identity")
@@ -242,6 +270,8 @@ def main() -> int:
     args = parser.parse_args()
     if args.init_editing_workspace:
         result = initialize_editing_workspace()
+    elif args.validate_editing_workspace:
+        result = validate_editing_workspace()
     elif args.backup_editing_workspace:
         result = {"backup": backup_workspace(EDITING, BACKUPS, EXPECTED_PNGS).relative_to(ROOT).as_posix()}
     elif args.restore_editing_backup:
