@@ -224,7 +224,7 @@ def species_lookup(document: dict[str, Any], english_name: str) -> dict[str, Any
 
 
 def validate_terms_glossary(document: dict[str, Any]) -> None:
-    required = {"ui", "locations", "moves", "abilities", "items", "character_names"}
+    required = {"ui", "locations", "moves", "abilities", "items", "character_names", "battle_terminology", "system_messages"}
     categories = document.get("categories")
     if not isinstance(categories, dict) or not required.issubset(categories):
         raise ValueError("Terminology glossary is missing required categories")
@@ -260,7 +260,8 @@ def species_name_consistency_errors(source_text: str, translation_segments: list
 
 
 def validate_translation_rows(source: list[dict[str, Any]], translations: list[dict[str, Any]],
-                             species_document: dict[str, Any] | None = None) -> list[str]:
+                             species_document: dict[str, Any] | None = None,
+                             terms_document: dict[str, Any] | None = None) -> list[str]:
     """Validate translation identifiers, segment shape, and exact protected-event order."""
     source_by_variant = {(row["record_id"], row["source_variant_sha256"]): row for row in source}
     seen: set[tuple[str, str]] = set()
@@ -277,8 +278,14 @@ def validate_translation_rows(source: list[dict[str, Any]], translations: list[d
         if origin is None:
             errors.append(f"unknown record_id/source variant: {rid}")
             continue
-        if row.get("status") not in {"untranslated", "machine_draft", "reviewed", "validated", "tested_in_game"}:
+        if row.get("status") not in {"untranslated", "machine_draft", "draft", "reviewed", "approved", "validated", "tested_in_game"}:
             errors.append(f"invalid status: {rid}")
+        if row.get("status") in {"reviewed", "approved", "validated", "tested_in_game"} and not row.get("reviewer"):
+            errors.append(f"reviewer attribution is required for status {row.get('status')}: {rid}")
+        if row.get("status") in {"approved", "validated", "tested_in_game"} and not row.get("approver"):
+            errors.append(f"approver attribution is required for status {row.get('status')}: {rid}")
+        if row.get("status") == "tested_in_game" and not row.get("runtime_evidence"):
+            errors.append(f"runtime evidence is required for tested_in_game: {rid}")
         source_occurrences = origin.get("occurrences", [])
         if source_occurrences:
             expected_versions = sorted({str(item["dataset"]).split("/")[-1] for item in source_occurrences})
@@ -310,6 +317,26 @@ def validate_translation_rows(source: list[dict[str, Any]], translations: list[d
         if species_document is not None:
             errors.extend(f"{rid}: {error}" for error in species_name_consistency_errors(
                 origin["source_text"], segments, species_document))
+        if terms_document is not None:
+            errors.extend(f"{rid}: {error}" for error in terminology_consistency_errors(
+                origin["source_text"], segments, terms_document))
+    return errors
+
+
+def terminology_consistency_errors(source_text: str, translation_segments: list[dict[str, Any]],
+                                   terms_document: dict[str, Any]) -> list[str]:
+    """Check only explicitly enforced, exact-form glossary terms; inflections remain review work."""
+    translated = "".join(segment.get("text", "") for segment in translation_segments if isinstance(segment, dict))
+    errors = []
+    for category, terms in terms_document.get("categories", {}).items():
+        for term in terms:
+            if not term.get("enforce") or not term.get("russian"):
+                continue
+            source = str(term["source"])
+            russian = str(term["russian"])
+            if re.search(rf"(?<![\w]){re.escape(source)}(?![\w])", source_text, flags=re.IGNORECASE) \
+                    and russian.casefold() not in translated.casefold():
+                errors.append(f"glossary term mismatch ({category}): {source} -> {russian}")
     return errors
 
 

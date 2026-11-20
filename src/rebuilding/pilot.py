@@ -84,9 +84,10 @@ def build_archive(source_bytes: bytes, resource: str, game: str, version: str,
             continue
         if version not in row.get("version_scope", []):
             continue
-        if row.get("status") == "machine_draft" and not include_machine_drafts:
-            raise ValueError(f"Unapproved machine draft requires explicit inclusion: {row['record_id']}")
-        if row.get("status") not in {"machine_draft", "reviewed", "validated", "tested_in_game"}:
+        status = row.get("status")
+        if status in {"machine_draft", "draft", "reviewed"} and not include_machine_drafts:
+            raise ValueError(f"Unapproved translation requires explicit inclusion: {row['record_id']}")
+        if status not in {"machine_draft", "draft", "reviewed", "approved", "validated", "tested_in_game"}:
             raise ValueError(f"Translation status is not buildable: {row.get('status')}")
         targets.append((row, entry_id, subfile_id, message_id))
 

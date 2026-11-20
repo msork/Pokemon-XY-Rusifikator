@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build isolated Pokémon X/Y LayeredFS pilot archives; never edits source RomFS."""
+"""Build isolated Pokémon X/Y LayeredFS translation candidates; never edits source RomFS."""
 
 from __future__ import annotations
 
@@ -25,19 +25,20 @@ RESOURCES = ("a/0/7/4", "a/0/8/2")
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--include-machine-drafts", action="store_true",
-                        help="required acknowledgment that the generated pilot is not human-approved")
-    parser.add_argument("--translations", type=Path, default=ROOT / "translations/pilot.jsonl")
+                        help="required to include draft, machine-draft, or reviewed rows in a local candidate")
+    parser.add_argument("--translations", type=Path, action="append", default=[ROOT / "translations/pilot.jsonl"],
+                        help="translation JSONL input; may be repeated")
     parser.add_argument("--workspace", type=Path, default=ROOT / "workspace")
-    parser.add_argument("--output", type=Path, default=ROOT / "build/milestone-3c")
+    parser.add_argument("--output", type=Path, default=ROOT / "build/milestone-3d/candidate")
     args = parser.parse_args()
     if not args.include_machine_drafts:
-        parser.error("pilot rows remain unapproved machine drafts; pass --include-machine-drafts to create local test candidates")
-    translations = read_jsonl(args.translations)
+        parser.error("unapproved translation rows are present; pass --include-machine-drafts to create local candidates")
+    translations = [row for path in args.translations for row in read_jsonl(path)]
     output_root = args.output.resolve()
     if ROOT.resolve() not in output_root.parents:
         parser.error("output directory must remain inside the project root")
     report = {
-        "milestone": "3C",
+        "milestone": "3D",
         "build_state": "unapproved_runtime_test_candidate",
         "runtime_tested": False,
         "installed": False,

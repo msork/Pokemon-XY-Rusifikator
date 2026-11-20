@@ -15,21 +15,23 @@ Contributions should be made as topic branches through the primary git.gay repos
 
 The four extracted datasets under `workspace/` are read-only local source material, excluded from Git. Original `.3ds` files, update data, saves, extracted resources, and full modified binaries must never enter this repository. Generated inspection data belongs in ignored `build/` or `reports/`. Any eventual release must use a legally reviewed delta format and preserve existing saves and game files.
 
-## Current milestone: 3C
+## Current milestone: 3D
 
-The owner confirmed Russian alphabet rendering in both games. The 295-word and 350-word rendering tests displayed; the 527-word test produced a blank information panel. These are observations, not universal engine limits. Milestone 3C creates isolated X/Y gameplay pilot archives but has not installed or runtime-tested them. All 12 pilot translations remain machine drafts pending human approval.
+The owner confirmed the Milestone 3C pilot in Pokémon X with the female protagonist: Options, mother's dialogue, Calem, and Shauna appeared. Pokémon Y and Serena remain untested. The owner also confirmed Russian alphabet rendering in both games. The 295-word and 350-word rendering tests displayed; the 527-word test produced a blank information panel. These are observations, not universal engine limits. Milestone 3D adds 41 bounded early-game drafts and builds isolated X/Y candidates. The new lines have not been installed or runtime-tested, and all translation records remain draft or machine draft pending human review.
 
-With the four local `workspace/` datasets present, regenerate the ignored source catalog and machine-draft pilot, validate and build local test candidates, and run unit tests:
+With the four local `workspace/` datasets present, regenerate the ignored source catalog, selected draft translations, coverage report, and local candidates, then run unit tests:
 
 ```powershell
 python scripts/build_translation_catalog.py
 python scripts/build_pilot_translations.py
-python scripts/validate_translation_data.py
-python scripts/build_gameplay_pilot.py --include-machine-drafts
+python scripts/build_early_game_drafts.py
+python scripts/validate_translation_data.py --translations translations/early-game.jsonl
+python scripts/report_translation_coverage.py --translations translations/early-game.jsonl
+python scripts/build_gameplay_pilot.py --include-machine-drafts --translations translations/early-game.jsonl --output build/milestone-3d/candidate
 python -m unittest discover -s tests -v
 ```
 
-The explicit build flag permits packaging of unapproved draft translations for a future owner test; it does not install the files. The source catalog and rebuilt full archives contain copyrighted game text and remain under ignored build directories. See the [Milestone 3C findings and build hashes](docs/research/milestone-3c.md), [Milestone 3B findings and attribution](docs/research/milestone-3b.md), [Milestone 2A findings](docs/research/milestone-2a.md), [Milestone 2B findings](docs/research/milestone-2b.md), [Milestone 2C findings](docs/research/milestone-2c.md), [Milestone 2D findings](docs/research/milestone-2d.md), [Milestone 3A findings](docs/research/milestone-3a.md), and [AzaharPlus test plan](docs/testing/azaharplus.md).
+The explicit build flag permits packaging of unapproved translations for a future owner test; it does not install the files. The source catalog and rebuilt full archives contain copyrighted game text and remain under ignored build directories. The current catalog identifies 35,216 English variants; the 53 draft records cover 0.150500% of those identified variants, while excluded archives and unclassified resources mean the full English corpus remains unknown. See the [Milestone 3D pipeline and findings](docs/research/milestone-3d.md), [Milestone 3C findings and build hashes](docs/research/milestone-3c.md), [Milestone 3B findings and attribution](docs/research/milestone-3b.md), [Milestone 2A findings](docs/research/milestone-2a.md), [Milestone 2B findings](docs/research/milestone-2b.md), [Milestone 2C findings](docs/research/milestone-2c.md), [Milestone 2D findings](docs/research/milestone-2d.md), [Milestone 3A findings](docs/research/milestone-3a.md), and [AzaharPlus test plan](docs/testing/azaharplus.md).
 
 ## Project layout
 

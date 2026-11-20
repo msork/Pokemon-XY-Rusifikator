@@ -19,13 +19,16 @@
       {"source": "Fast", "russian": "Быстро", "status": "provisional_review_required"}
     ],
     "locations": [
-      {"source": "Vaniville Town", "russian": "Ванивилл", "status": "provisional_review_required", "note": "Place-name spelling requires project terminology review."}
+      {"source": "Vaniville Town", "russian": "Ванивилл", "status": "provisional_review_required", "note": "Place-name spelling requires project terminology review."},
+      {"source": "Aquacorde Town", "russian": null, "status": "needs_research", "note": "Do not invent a localized name; check for a stable Russian source."},
+      {"source": "Kalos", "russian": "Калос", "status": "provisional_review_required"}
     ],
     "moves": [
-      {"source": "Tackle", "russian": null, "status": "needs_research"},
-      {"source": "Growl", "russian": null, "status": "needs_research"},
-      {"source": "Vine Whip", "russian": null, "status": "needs_research"},
-      {"source": "Scratch", "russian": null, "status": "needs_research"}
+      {"source": "Tackle", "russian": "Бросок", "status": "provisional_review_required", "source_reference": "Bulbapedia Tackle (move), Russian-language row; context needs review.", "reference_url": "https://bulbapedia.bulbagarden.net/wiki/Tackle_(move)", "reference_license": "CC BY-NC-SA 2.5", "retrieved_date": "2026-11-19"},
+      {"source": "Growl", "russian": "Рычание", "status": "provisional_review_required", "source_reference": "Candidate found in a Russian fan reference; localization authority and license not verified.", "reference_url": "https://poke-universe.ru/dex/attacks/bw/growl.html", "reference_license": "unverified", "retrieved_date": "2026-11-19"},
+      {"source": "Scratch", "russian": "Царапание", "status": "provisional_review_required", "source_reference": "Bulbapedia Scratch (move), Russian-language row; context needs review.", "reference_url": "https://bulbapedia.bulbagarden.net/wiki/Scratch_(move)", "reference_license": "CC BY-NC-SA 2.5", "retrieved_date": "2026-11-19"},
+      {"source": "Pound", "russian": null, "status": "needs_research"},
+      {"source": "Vine Whip", "russian": null, "status": "needs_research"}
     ],
     "abilities": [
       {"source": "Overgrow", "russian": null, "status": "needs_research"},
@@ -35,12 +38,29 @@
     "items": [
       {"source": "Potion", "russian": null, "status": "needs_research"},
       {"source": "Super Potion", "russian": null, "status": "needs_research"},
-      {"source": "Poké Ball", "russian": "Покебол", "status": "provisional_review_required"}
+      {"source": "Poké Ball", "russian": "Покебол", "status": "provisional_review_required"},
+      {"source": "Town Map", "russian": "Карта города", "status": "provisional_review_required"},
+      {"source": "Running Shoes", "russian": "Кроссовки для бега", "status": "provisional_review_required"}
     ],
     "character_names": [
+      {"source": "Mother", "russian": "мама", "status": "provisional_review_required", "note": "Use kinship context, not a personal name."},
       {"source": "Calem", "russian": "Калем", "status": "provisional_review_required"},
       {"source": "Serena", "russian": "Серена", "status": "provisional_review_required"},
       {"source": "Shauna", "russian": "Шауна", "status": "provisional_review_required"}
+    ],
+    "battle_terminology": [
+      {"source": "battle", "russian": "бой", "status": "provisional_review_required"},
+      {"source": "move", "russian": "приём", "status": "provisional_review_required"},
+      {"source": "opponent", "russian": "противник", "status": "provisional_review_required"},
+      {"source": "HP", "russian": "ОЗ", "status": "provisional_review_required"},
+      {"source": "fainted", "russian": "потерял сознание", "status": "provisional_review_required"}
+    ],
+    "system_messages": [
+      {"source": "Save", "russian": "Сохранить", "status": "provisional_review_required"},
+      {"source": "Continue", "russian": "Продолжить", "status": "provisional_review_required"},
+      {"source": "New Game", "russian": "Новая игра", "status": "provisional_review_required"},
+      {"source": "X Button", "russian": "кнопка X", "status": "provisional_review_required"},
+      {"source": "Bag", "russian": "Сумка", "status": "provisional_review_required"}
     ]
   }
 }
