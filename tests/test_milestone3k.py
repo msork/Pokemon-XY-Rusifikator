@@ -5,16 +5,17 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from scripts.build_milestone3k_fight_test import (CANONICAL, TEST_ROOT, build_candidate,
-                                                 prepare_png, sha)
-from scripts.install_milestone3k_image_test import (candidate_targets as image_targets,
-                                                   install as install_image, rollback as rollback_image)
 from scripts.install_milestone3k_text import (candidate_targets as text_targets,
                                               install as install_text, rollback as rollback_text)
+from src.extraction.garc import GARC
 
 ROOT = Path(__file__).resolve().parents[1]
 TEXT_MANIFEST = ROOT / "build/milestone-3j/text-candidate/manifest.json"
-IMAGE_MANIFEST = ROOT / "build/milestone-3k/image-candidate/manifest.json"
+
+
+def sha(data: bytes) -> str:
+    import hashlib
+    return hashlib.sha256(data).hexdigest()
 
 
 def modroot(profile: Path) -> Path:
@@ -24,7 +25,7 @@ def modroot(profile: Path) -> Path:
 
 
 class Milestone3KTests(unittest.TestCase):
-    def test_text_manifest_covers_exact_four_verified_update_precedence_targets(self):
+    def test_text_manifest_covers_exact_four_verified_precedence_targets(self):
         manifest, targets = text_targets(TEXT_MANIFEST)
         self.assertEqual(manifest["translation_records"], 227)
         self.assertEqual(len(targets), 4)
@@ -32,7 +33,9 @@ class Milestone3KTests(unittest.TestCase):
         for _relative, proof, path in targets:
             expected = "update-1.5" if proof["resource"] == "a/0/7/4" else "base"
             self.assertEqual(proof["source_version"], expected)
-            self.assertEqual(sha(path.read_bytes()), proof["output_sha256"])
+            raw = path.read_bytes()
+            self.assertEqual(sha(raw), proof["output_sha256"])
+            self.assertEqual(GARC.parse(raw).rebuild(), raw)
 
     def test_text_install_and_rollback_preserve_only_four_exact_targets(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -79,51 +82,22 @@ class Milestone3KTests(unittest.TestCase):
                              prior_record_path=prior)
             self.assertEqual(path.read_bytes(), b"local modification")
 
-    def test_disposable_boi_png_and_image_candidate_leave_canonical_png_unchanged(self):
-        canonical_hash = sha(CANONICAL.read_bytes())
-        with tempfile.TemporaryDirectory() as temp:
-            test_root = Path(temp) / "art"
-            metadata = prepare_png(test_root=test_root)
-            (test_root / "manifest.json").write_text(json.dumps(metadata), encoding="utf-8")
-            output = Path(temp) / "candidate"
-            report = build_candidate(test_root=test_root, output_root=output)
-            self.assertFalse(report["canonical_png_modified"])
-            self.assertEqual(metadata["label"], "\u0411\u041e\u0419")
-            self.assertEqual([row["dimensions"] for row in report["games"]], [[80, 50], [80, 50]])
-        self.assertEqual(sha(CANONICAL.read_bytes()), canonical_hash)
+    def test_rejected_image_is_rolled_back_without_changing_text_or_other_mods(self):
+        root = Path.home() / "AppData/Roaming/AzaharPlus/load/mods"
+        image_record_path = ROOT / "build/milestone-3k/image-install/rollback-record.json"
+        self.assertTrue(image_record_path.is_file())
+        image_record = json.loads(image_record_path.read_text(encoding="utf-8"))
+        self.assertTrue(image_record["rollback_verified"])
+        for relative in image_record["restored_paths"]:
+            self.assertFalse(root.joinpath(*relative.split("/")).exists())
 
-    def test_image_candidate_installs_and_rolls_back_independently(self):
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            output = root / "candidate"
-            image_report = build_candidate(TEST_ROOT, output)
-            manifest_path = output / "manifest.json"
-            self.assertEqual(len(image_targets(manifest_path)), 2)
-            profile = root / "profile"
-            mods = modroot(profile)
-            originals = {}
-            for index, (relative, _proof, _candidate) in enumerate(image_targets(manifest_path)):
-                if index == 1:
-                    continue
-                path = mods.joinpath(*relative.split("/"))
-                path.parent.mkdir(parents=True, exist_ok=True)
-                original = b"prior-image-mod"
-                path.write_bytes(original)
-                originals[relative] = original
-            unrelated = mods / "another-title/romfs/keep.bin"
-            unrelated.parent.mkdir(parents=True)
-            unrelated.write_bytes(b"keep")
-            records = root / "image-install"
-            record = install_image(manifest_path, appdata=profile, record_root=records)
-            self.assertEqual(len(record["installed_files"]), 2)
-            self.assertFalse(record["backup_files"][1]["existed"])
-            self.assertEqual(image_report["installed"], False)
-            result = rollback_image(record_root=records, appdata=profile)
-            self.assertTrue(result["rollback_verified"])
-            for relative, data in originals.items():
-                self.assertEqual(mods.joinpath(*relative.split("/")).read_bytes(), data)
-            self.assertFalse(mods.joinpath(*image_targets(manifest_path)[1][0].split("/")).exists())
-            self.assertEqual(unrelated.read_bytes(), b"keep")
+        text_record = json.loads((ROOT / "build/milestone-3k/installation-record.json").read_text(encoding="utf-8"))
+        for record in text_record["installed_files"]:
+            target = root.joinpath(*record["relative_path"].split("/"))
+            self.assertEqual(sha(target.read_bytes()), record["sha256"])
+        self.assertTrue((ROOT / "build/milestone-3g/installation-record.json").is_file())
+        self.assertFalse((ROOT / "build/milestone-3k/image-candidate").exists())
+        self.assertFalse((ROOT / "build/milestone-3k/fight-artwork-test").exists())
 
 
 if __name__ == "__main__":
