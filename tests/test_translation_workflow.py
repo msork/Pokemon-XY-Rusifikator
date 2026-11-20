@@ -7,6 +7,7 @@ import unittest
 
 from src.translation.workflow import export_batch, import_batch
 from scripts.report_translation_coverage import build_dashboard
+from scripts.classify_english_candidates import english_candidate
 from src.translation.catalog import validate_translation_rows
 
 
@@ -80,6 +81,16 @@ class TranslationWorkflowTests(unittest.TestCase):
         errors = validate_translation_rows([source], [row])
         self.assertTrue(any("reviewer attribution" in error for error in errors))
         self.assertTrue(any("approver attribution" in error for error in errors))
+
+    def test_language_classifier_keeps_short_and_ambiguous_text_unclassified(self) -> None:
+        label, confidence, _ = english_candidate("Yes")
+        self.assertEqual(label, "undetermined")
+        self.assertEqual(confidence, 0.0)
+        label, confidence, _ = english_candidate(
+            "We are going to the town and you can meet the neighbors there before we start our journey."
+        )
+        self.assertEqual(label, "high_confidence_candidate")
+        self.assertEqual(confidence, 0.90)
 
 
 if __name__ == "__main__":

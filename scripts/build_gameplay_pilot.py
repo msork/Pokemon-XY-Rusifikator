@@ -30,6 +30,7 @@ def main() -> int:
                         help="translation JSONL input; may be repeated")
     parser.add_argument("--workspace", type=Path, default=ROOT / "workspace")
     parser.add_argument("--output", type=Path, default=ROOT / "build/milestone-3d/candidate")
+    parser.add_argument("--milestone", default="3D", help="label recorded in the generated manifest")
     args = parser.parse_args()
     if not args.include_machine_drafts:
         parser.error("unapproved translation rows are present; pass --include-machine-drafts to create local candidates")
@@ -38,7 +39,7 @@ def main() -> int:
     if ROOT.resolve() not in output_root.parents:
         parser.error("output directory must remain inside the project root")
     report = {
-        "milestone": "3D",
+        "milestone": args.milestone,
         "build_state": "unapproved_runtime_test_candidate",
         "runtime_tested": False,
         "installed": False,

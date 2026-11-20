@@ -31,6 +31,7 @@ def build_dashboard(catalog_path: Path, translation_paths: list[Path], scan_repo
     english_keys = set()
     stale_keys = []
     statuses: Counter[str] = Counter()
+    review_states: Counter[str] = Counter()
     total_variants = occurrences = 0
     with catalog_path.open(encoding="utf-8") as stream:
         for line in stream:
@@ -50,6 +51,7 @@ def build_dashboard(catalog_path: Path, translation_paths: list[Path], scan_repo
         status = str(row.get("status", "invalid"))
         if key in valid_translation_keys:
             statuses[status] += 1
+            review_states[str(row.get("review_state", "unreviewed"))] += 1
         else:
             stale_keys.append(key[0])
     if stale_keys:
@@ -81,6 +83,7 @@ def build_dashboard(catalog_path: Path, translation_paths: list[Path], scan_repo
             "approved": statuses.get("approved", 0),
             "validated": statuses.get("validated", 0),
             "tested_in_game": statuses.get("tested_in_game", 0),
+            "assistant_reviewed_pending_human": review_states.get("assistant_reviewed_pending_human", 0),
             "untranslated_source_variants": untranslated,
             "coverage_percent": round(100 * len(valid_translation_keys) / total_variants, 6) if total_variants else 0,
             "identified_english_variants": identified_english,
@@ -119,11 +122,12 @@ def markdown(dashboard: dict) -> str:
         f"| Approved | {coverage['approved']} |",
         f"| Structurally validated | {coverage['validated']} |",
         f"| Tested in game | {coverage['tested_in_game']} |",
+        f"| Assistant review recorded; human approval pending | {coverage['assistant_reviewed_pending_human']} |",
         f"| Untranslated source variants | {coverage['untranslated_source_variants']} |",
         f"| Coverage | {coverage['coverage_percent']:.6f}% |",
         f"| Identified English variants covered | {coverage['translated_identified_english_variants']:,} / {coverage['identified_english_variants']:,} ({coverage['identified_english_coverage_percent']:.6f}%) |",
         "",
-        "Status counts are mutually exclusive. Runtime notes supplied by the owner are not changed into translation approval states.",
+        "Status counts are mutually exclusive. Assistant review evidence is tracked separately and never changes a draft into human-reviewed or approved content. Runtime notes supplied by the owner are not changed into translation approval states.",
         "",
         "## Parsed corpus",
         "",

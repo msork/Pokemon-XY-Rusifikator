@@ -19,24 +19,27 @@
       {"source": "Fast", "russian": "Быстро", "status": "provisional_review_required"}
     ],
     "locations": [
-      {"source": "Vaniville Town", "russian": "Ванивилл", "status": "provisional_review_required", "note": "Place-name spelling requires project terminology review."},
-      {"source": "Aquacorde Town", "russian": null, "status": "needs_research", "note": "Do not invent a localized name; check for a stable Russian source."},
+      {"source": "Vaniville Town", "russian": "Ванивайл-таун", "status": "provisional_review_required", "note": "Provisional fan-community spelling; official Russian console localization not verified.", "reference_url": "https://pokemon.fandom.com/ru/wiki/Калос", "reference_license": "unverified", "retrieved_date": "2026-11-19"},
+      {"source": "Vaniville Pathway", "russian": "Тропа Ванивайл", "status": "provisional_review_required", "note": "Descriptive project draft; no established Russian localization verified."},
+      {"source": "Aquacorde Town", "russian": "Аквакорд-таун", "status": "provisional_review_required", "note": "Provisional fan-community spelling; official Russian console localization not verified.", "reference_url": "https://wiki.pokeliga.com/Город_Аквакорд", "reference_license": "unverified", "retrieved_date": "2026-11-19"},
       {"source": "Kalos", "russian": "Калос", "status": "provisional_review_required"}
     ],
     "moves": [
+      {"source": "Absorb", "russian": null, "status": "needs_research", "note": "Russian main-series localization not verified; do not substitute a guessed term."},
       {"source": "Tackle", "russian": "Бросок", "status": "provisional_review_required", "source_reference": "Bulbapedia Tackle (move), Russian-language row; context needs review.", "reference_url": "https://bulbapedia.bulbagarden.net/wiki/Tackle_(move)", "reference_license": "CC BY-NC-SA 2.5", "retrieved_date": "2026-11-19"},
+      {"source": "Tail Whip", "russian": "Виляние хвостом", "status": "provisional_review_required", "note": "Descriptive draft; official Gen VI Russian game terminology not verified."},
       {"source": "Growl", "russian": "Рычание", "status": "provisional_review_required", "source_reference": "Candidate found in a Russian fan reference; localization authority and license not verified.", "reference_url": "https://poke-universe.ru/dex/attacks/bw/growl.html", "reference_license": "unverified", "retrieved_date": "2026-11-19"},
       {"source": "Scratch", "russian": "Царапание", "status": "provisional_review_required", "source_reference": "Bulbapedia Scratch (move), Russian-language row; context needs review.", "reference_url": "https://bulbapedia.bulbagarden.net/wiki/Scratch_(move)", "reference_license": "CC BY-NC-SA 2.5", "retrieved_date": "2026-11-19"},
-      {"source": "Pound", "russian": null, "status": "needs_research"},
-      {"source": "Vine Whip", "russian": null, "status": "needs_research"}
+      {"source": "Pound", "russian": "Тяжёлый удар", "status": "provisional_review_required", "source_reference": "Bulbapedia Russian-language row; official Gen VI console localization not verified.", "reference_url": "https://bulbapedia.bulbagarden.net/wiki/Pound", "reference_license": "CC BY-NC-SA 2.5", "retrieved_date": "2026-11-19"},
+      {"source": "Vine Whip", "russian": "Плеть-лиана", "status": "provisional_review_required", "source_reference": "Russian Pokémon TCG translation; main-series game term not verified.", "reference_url": "https://assets.pokemon.com/assets/cms2-ru-ru/pdf/trading-card-game/tcg_sun_moon_2_card_translation.pdf", "reference_license": "Pokémon Company asset; reuse terms require review", "retrieved_date": "2026-11-19"}
     ],
     "abilities": [
-      {"source": "Overgrow", "russian": null, "status": "needs_research"},
-      {"source": "Blaze", "russian": null, "status": "needs_research"},
-      {"source": "Torrent", "russian": null, "status": "needs_research"}
+      {"source": "Overgrow", "russian": "Зарастание", "status": "provisional_review_required", "reference_url": "https://bulbapedia.bulbagarden.net/wiki/Fresh_Greenery", "reference_license": "CC BY-NC-SA 2.5", "retrieved_date": "2026-11-19", "note": "Russian name listed by source; official Gen VI console use unverified."},
+      {"source": "Blaze", "russian": "Яркий огонь", "status": "provisional_review_required", "reference_url": "https://bulbapedia.bulbagarden.net/wiki/Blaze_(Ability)", "reference_license": "CC BY-NC-SA 2.5", "retrieved_date": "2026-11-19", "note": "Variant terminology listed by source; official Gen VI console use unverified."},
+      {"source": "Torrent", "russian": "Стремительный поток", "status": "provisional_review_required", "reference_url": "https://bulbapedia.bulbagarden.net/wiki/Torrent", "reference_license": "CC BY-NC-SA 2.5", "retrieved_date": "2026-11-19", "note": "Russian name listed by source; official Gen VI console use unverified."}
     ],
     "items": [
-      {"source": "Potion", "russian": null, "status": "needs_research"},
+      {"source": "Potion", "russian": "Зелье", "status": "provisional_review_required", "reference_url": "https://wiki.pokeliga.com/Зелье", "reference_license": "unverified", "retrieved_date": "2026-11-19", "note": "Russian fan usage; official game terminology and reuse terms unverified."},
       {"source": "Super Potion", "russian": null, "status": "needs_research"},
       {"source": "Poké Ball", "russian": "Покебол", "status": "provisional_review_required"},
       {"source": "Town Map", "russian": "Карта города", "status": "provisional_review_required"},
@@ -46,12 +49,19 @@
       {"source": "Mother", "russian": "мама", "status": "provisional_review_required", "note": "Use kinship context, not a personal name."},
       {"source": "Calem", "russian": "Калем", "status": "provisional_review_required"},
       {"source": "Serena", "russian": "Серена", "status": "provisional_review_required"},
-      {"source": "Shauna", "russian": "Шауна", "status": "provisional_review_required"}
+      {"source": "Shauna", "russian": "Шауна", "status": "provisional_review_required"},
+      {"source": "Tierno", "russian": "Тиерно", "status": "provisional_review_required"},
+      {"source": "Trevor", "russian": "Тревор", "status": "provisional_review_required"},
+      {"source": "Professor Sycamore", "russian": "профессор Сикамор", "status": "provisional_review_required"}
     ],
     "battle_terminology": [
       {"source": "battle", "russian": "бой", "status": "provisional_review_required"},
       {"source": "move", "russian": "приём", "status": "provisional_review_required"},
       {"source": "opponent", "russian": "противник", "status": "provisional_review_required"},
+      {"source": "wild Pokémon", "russian": "дикий покемон", "status": "provisional_review_required"},
+      {"source": "starter Pokémon", "russian": "стартовый покемон", "status": "provisional_review_required"},
+      {"source": "partner Pokémon", "russian": "покемон-напарник", "status": "provisional_review_required"},
+      {"source": "opposing Pokémon", "russian": "покемон противника", "status": "provisional_review_required"},
       {"source": "HP", "russian": "ОЗ", "status": "provisional_review_required"},
       {"source": "fainted", "russian": "потерял сознание", "status": "provisional_review_required"}
     ],
