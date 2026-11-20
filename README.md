@@ -32,7 +32,7 @@ python scripts/verify_build_manifest.py build/milestone-3g/candidate/manifest.js
 python -m unittest discover -s tests -v
 ```
 
-The candidate builder uses update 1.5 for `a/0/7/4` and the base resource for `a/0/8/2` where no update override exists. Candidate archives and source catalogs stay under ignored `build/`; they are not release files. Milestone 3G did not install patches, launch AzaharPlus, or modify saves.
+The candidate builder uses update 1.5 for `a/0/7/4` and the base resource for `a/0/8/2` where no update override exists. The four test archives are installed in the X/Y LayeredFS folders, with verified backups and rollback under ignored `build/milestone-3g/`. They are not release files. AzaharPlus has not been launched for Milestone 3G, and saves were not modified. See the [deployment record](docs/testing/milestone-3g-deployment.md) for hashes and owner checks.
 
 ## Project layout
 

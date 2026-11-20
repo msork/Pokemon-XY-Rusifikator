@@ -1,6 +1,6 @@
 # Milestone 3G owner runtime checklist
 
-The candidate is built but has **not** been installed or launched. All rows remain drafts for runtime evaluation, not final linguistic approval. Do not overwrite a save. Run Pokémon X and Pokémon Y separately with update 1.5 enabled.
+The candidate is installed in both LayeredFS mod folders but has **not** been launched for Milestone 3G runtime evaluation. All rows remain drafts, not final linguistic approval. Do not overwrite a save. Run Pokémon X and Pokémon Y separately with update 1.5 enabled.
 
 ## Candidate archives
 
@@ -11,7 +11,7 @@ The candidate is built but has **not** been installed or launched. All rows rema
 | Pokémon Y (`0004000000055E00`) | `build/milestone-3g/candidate/pokemon-y/romfs/a/0/7/4` | `%APPDATA%\AzaharPlus\load\mods\0004000000055E00\romfs\a\0\7\4` |
 | Pokémon Y (`0004000000055E00`) | `build/milestone-3g/candidate/pokemon-y/romfs/a/0/8/2` | `%APPDATA%\AzaharPlus\load\mods\0004000000055E00\romfs\a\0\8\2` |
 
-Before any future installation, back up the currently installed Milestone 3F targets and record their hashes. The current Milestone 3G task did not install or replace any files.
+The installer backed up all four existing Milestone 3F target files before replacement. Their original and installed hashes are recorded in [the deployment record](milestone-3g-deployment.md) and ignored `build/milestone-3g/installation-record.json`.
 
 ## Scene-ordered checks
 

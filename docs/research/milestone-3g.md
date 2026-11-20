@@ -65,7 +65,7 @@ python scripts/build_gameplay_pilot.py --include-machine-drafts --translations t
 python scripts/verify_build_manifest.py build/milestone-3g/candidate/manifest.json
 ```
 
-The candidate is unapproved and uninstalled. Both games produce the same archive hashes because the selected effective source archives and message variants are identical:
+The candidate remains unapproved. It has been installed in both games' LayeredFS mod folders for owner runtime testing; no Milestone 3G AzaharPlus launch has occurred. Both games produce the same archive hashes because the selected effective source archives and message variants are identical:
 
 | Game | Resource | Effective source | Source SHA-256 | Candidate SHA-256 |
 |---|---|---|---|---|
@@ -74,7 +74,7 @@ The candidate is unapproved and uninstalled. Both games produce the same archive
 | Pokémon Y | `a/0/7/4` | update 1.5 | `ed8a7a8e69e24ffb4d55c8ff6912457dbd4b4fb8825f30b1511563ab91ba0881` | `4df53ab9e1a7fa68d0488640e722cda884a6b8299ee322082a0fd341464e2f2e` |
 | Pokémon Y | `a/0/8/2` | base (no update override) | `16b9a70f11fd6ac5779a577a16e457b793028be612d279dab28d1abf59349999` | `6f24c4590d3e3b77bf8523b9a5522c03b2d861f5b80148269f838c4db53cb3f6` |
 
-The X/Y `a/0/8/2` source archives are shared. The builder reports 71 translated message variants in `a/0/7/4` and 101 in `a/0/8/2`. It verified 129 and 420 unrelated GARC members unchanged, plus 5,727 and 60 untranslated messages unchanged, respectively. Build artifacts remain under ignored `build/` and are not committed.
+The X/Y `a/0/8/2` source archives are shared. The builder reports 71 translated message variants in `a/0/7/4` and 101 in `a/0/8/2`. It verified 129 and 420 unrelated GARC members unchanged, plus 5,727 and 60 untranslated messages unchanged, respectively. All four candidate hashes were verified after installation. The previous Milestone 3F files were backed up with hashes; details and rollback steps are in the [deployment record](../testing/milestone-3g-deployment.md). Build artifacts remain under ignored `build/` and are not committed.
 
 ## Remaining work
 
