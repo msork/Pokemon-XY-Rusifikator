@@ -199,14 +199,17 @@ class TextFile:
             section_offset, section_header, table_padding,
         )
 
-    def rebuild(self, replacements: Mapping[int, str | Sequence[int]] | None = None) -> bytes:
+    def rebuild(self, replacements: Mapping[int, str | Sequence[int]] | None = None, *,
+                control_adjustments: Mapping[int, Sequence[Sequence[int]]] | None = None) -> bytes:
         """Serialize the original file, optionally replacing messages by stable line ID.
 
         String replacements encode as BMP UTF-16 code units. Sequence replacements
         provide decoded message-body words (without the original terminator suffix).
-        Both forms must preserve the exact source control/placeholder token sequence.
+        Both forms must preserve the exact source control/placeholder token sequence,
+        unless a caller supplies a narrowly scoped explicit control adjustment.
         """
         replacements = replacements or {}
+        control_adjustments = control_adjustments or {}
         if any(not isinstance(message_id, int) or message_id < 0 or message_id >= len(self.lines) for message_id in replacements):
             raise MessageError("Replacement refers to an absent message ID")
         decoded_records: list[tuple[int, ...]] = []
@@ -234,7 +237,16 @@ class TextFile:
                     if any(not isinstance(word, int) or not 0 <= word <= 0xFFFF for word in words_body):
                         raise MessageError("Decoded replacement words must be unsigned 16-bit integers")
                     words = words_body + line.terminator_suffix
-                if _control_signature(words) != line.tokens:
+                expected_tokens = list(line.tokens)
+                for event in control_adjustments.get(line.message_id, ()):
+                    if tuple(event) != (0x0010, 0x0003, 0x1100, 0x00FF, 0x0202):
+                        raise MessageError("Only the documented Gen VI gender-selection control can be removed")
+                    gender_token = {"type": "variable", "count": 3, "code": 0x1100, "args": [0x00FF, 0x0202]}
+                    try:
+                        expected_tokens.remove(gender_token)
+                    except ValueError as exc:
+                        raise MessageError("Requested control adjustment is absent from the source message") from exc
+                if _control_signature(words) != tuple(expected_tokens):
                     raise MessageError(f"Replacement for message {line.message_id} changes control codes or placeholders")
             if len(words) > 0xFFFF:
                 raise MessageError(f"Replacement for message {line.message_id} exceeds the TextFile word-count limit")

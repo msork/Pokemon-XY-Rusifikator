@@ -62,8 +62,9 @@
       {"source": "starter Pokémon", "russian": "стартовый покемон", "status": "provisional_review_required"},
       {"source": "partner Pokémon", "russian": "покемон-напарник", "status": "provisional_review_required"},
       {"source": "opposing Pokémon", "russian": "покемон противника", "status": "provisional_review_required"},
-      {"source": "HP", "russian": "ОЗ", "status": "provisional_review_required"},
-      {"source": "fainted", "russian": "потерял сознание", "status": "provisional_review_required"}
+      {"source": "HP", "russian": "ОЗ", "status": "provisional_review_required", "russian_expansion": "Очки здоровья", "enforce": true, "note": "Cyrillic abbreviation for the Russian term meaning health points; enforce in localized text."},
+      {"source": "fainted", "russian": "потерял сознание", "status": "provisional_review_required"},
+      {"source": "PP", "russian": "ОС", "russian_expansion": "Очки силы", "status": "provisional_review_required", "enforce": true, "note": "Cyrillic abbreviation for the Russian term meaning power points; enforce in localized text."}
     ],
     "system_messages": [
       {"source": "Save", "russian": "Сохранить", "status": "provisional_review_required"},
@@ -71,6 +72,17 @@
       {"source": "New Game", "russian": "Новая игра", "status": "provisional_review_required"},
       {"source": "X Button", "russian": "кнопка X", "status": "provisional_review_required"},
       {"source": "Bag", "russian": "Сумка", "status": "provisional_review_required"}
+    ],
+    "battle_ui": [
+      {"source": "POKÉMON", "russian": "ПОКЕМОНЫ", "status": "provisional_review_required", "note": "Upper-screen menu label; runtime fit and exact battle-screen use remain to be confirmed."},
+      {"source": "POKÉDEX", "russian": "ПОКЕДЕКС", "status": "provisional_review_required", "note": "Upper-screen menu label; runtime fit remains to be confirmed."},
+      {"source": "SAVE", "russian": "СОХРАНИТь", "status": "provisional_review_required", "note": "Menu label; runtime fit remains to be confirmed."},
+      {"source": "OPTIONS", "russian": "НАСТРОЙКИ", "status": "provisional_review_required", "note": "Menu label; runtime fit remains to be confirmed."},
+      {"source": "BAG", "russian": "СУМКА", "status": "provisional_review_required", "note": "Menu/battle command label; inflected text is allowed outside the fixed label."},
+      {"source": "RUN", "russian": "БЕг", "status": "provisional_review_required", "note": "Compact battle command label; runtime wording and fit need owner review."},
+      {"source": "FIGHT", "russian": null, "status": "needs_research", "note": "No matching English TextFile source string was found; identify the actual texture or executable/UI source before selecting a translation."},
+      {"source": "Lv.", "russian": "Ур.", "status": "provisional_review_required", "note": "Compact Russian level abbreviation; runtime fit remains to be confirmed.", "enforce": true},
+      {"source": "NEXT LV.", "russian": "ДО СЛ. УР.", "status": "provisional_review_required", "note": "Compact level progress label; runtime fit remains to be confirmed.", "enforce": true}
     ]
   }
 }

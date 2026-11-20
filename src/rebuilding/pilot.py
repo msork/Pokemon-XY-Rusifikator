@@ -10,6 +10,7 @@ from typing import Any
 
 from src.extraction.garc import GARC, GARCError
 from src.extraction.messages import MessageError, TextFile
+from src.translation.catalog import expected_translation_controls
 
 
 def sha256(data: bytes) -> str:
@@ -72,6 +73,7 @@ def build_archive(source_bytes: bytes, resource: str, game: str, version: str,
     if archive.rebuild() != source_bytes:
         raise GARCError(f"Source GARC no-change rebuild is not byte-exact: {resource}")
     replacement_by_member: dict[tuple[int, int], dict[int, tuple[int, ...]]] = {}
+    controls_by_member: dict[tuple[int, int], dict[int, list[list[int]]]] = {}
     targets: list[tuple[dict[str, Any], int, int, int]] = []
     for row in translations:
         row_resource, entry_id, subfile_id, message_id = parse_record_id(str(row.get("record_id", "")))
@@ -121,20 +123,25 @@ def build_archive(source_bytes: bytes, resource: str, game: str, version: str,
                 index += 1
             else:
                 index += 1
-        if source_controls != source_events:
+        if source_controls != expected_translation_controls(row, source_events):
             raise ValueError(f"Control/placeholder sequence mismatch: {row['record_id']}")
         words = translation_words(row)
         member_replacements = replacement_by_member.setdefault(member_key, {})
         if message_id in member_replacements:
             raise ValueError(f"Duplicate translation target: {row['record_id']}")
         member_replacements[message_id] = words
+        if row.get("control_adjustments"):
+            controls_by_member.setdefault(member_key, {})[message_id] = [
+                [int(word, 16) for word in item["control_words"]]
+                for item in row["control_adjustments"]
+            ]
 
     replacement_members: dict[tuple[int, int], bytes] = {}
     untouched_message_count = 0
     for member_key, replacements in replacement_by_member.items():
         original_member = known[member_key]
         original_tf = TextFile.parse(original_member.data)
-        rebuilt_tf = original_tf.rebuild(replacements)
+        rebuilt_tf = original_tf.rebuild(replacements, control_adjustments=controls_by_member.get(member_key))
         rebuilt_parsed = TextFile.parse(rebuilt_tf)
         for message_id, line in enumerate(original_tf.lines):
             rebuilt_words = rebuilt_parsed.lines[message_id].decoded_words

@@ -105,6 +105,20 @@ class GameplayPilotTests(unittest.TestCase):
         self.assertEqual(build_archive(source, "a/0/8/2", "pokemon-x", "base", [translation])[0], output)
         self.assertEqual(hashlib.sha256(source).hexdigest(), proof["source_sha256"])
 
+    def test_gender_neutral_rewrite_requires_and_preserves_explicit_allowed_adjustment(self):
+        gender = (0x0010, 3, 0x1100, 0x00FF, 0x0202)
+        source_words = tuple(map(ord, "h")) + gender + tuple(map(ord, "iser")) + (0,)
+        text = TextFile.parse(make_textfile([source_words]))
+        replacement = tuple(map(ord, "нейтральный текст"))
+        with self.assertRaisesRegex(ValueError, "changes control codes"):
+            text.rebuild({0: replacement})
+        rebuilt = text.rebuild({0: replacement}, control_adjustments={0: [gender]})
+        result = TextFile.parse(rebuilt).lines[0]
+        self.assertEqual(result.display_text, "нейтральный текст")
+        self.assertFalse(any(token.get("code") == 0x1100 for token in result.tokens))
+        with self.assertRaisesRegex(ValueError, "Only the documented"):
+            text.rebuild({0: replacement}, control_adjustments={0: [(0x0010, 1, 0xBE01)]})
+
     def test_game_specific_hashes_select_x_and_y_records_independently(self):
         x_source = make_garc(make_textfile([tuple(map(ord, "X-only")) + (0,)]))
         y_source = make_garc(make_textfile([tuple(map(ord, "Y-only")) + (0,)]))

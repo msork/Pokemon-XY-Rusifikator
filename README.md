@@ -15,26 +15,24 @@ Contributions should be made as topic branches through the primary git.gay repos
 
 The four extracted datasets under `workspace/` are read-only local source material, excluded from Git. Original `.3ds` files, update data, saves, extracted resources, and full modified binaries must never enter this repository. Generated inspection data belongs in ignored `build/` or `reports/`. Any eventual release must use a legally reviewed delta format and preserve existing saves and game files.
 
-## Current milestone: 3F
+## Current milestone: 3G
 
-The owner confirmed the Milestone 3C pilot in Pokémon X with the female protagonist: Options, mother's dialogue, Calem, and Shauna appeared. Pokémon Y and Serena remain untested for that pilot. Russian alphabet rendering, including Ё/ё, was owner-confirmed in both games. The 295-word and 350-word rendering tests displayed; the 527-word test produced a blank information panel. These are observations, not universal engine limits. Milestone 3E tracks 139 bounded source variants (127 draft, 12 machine draft), covering 0.394707% of the 35,216 path-classified English variants. Milestone 3F installed the four X/Y LayeredFS candidates after backing up the prior files. All translations remain unapproved, and the new installation has not been runtime-tested. Character-creation prompt resources and much of the English corpus remain unresolved.
+Milestone 3F's pilot was owner-tested in Pokémon X with the female protagonist. The owner then reported two malformed bedroom lines and English battle labels/messages. Milestone 3G traced the PC and mirror lines to `a/0/8/2`, member `0055/00`, messages 1 and 3; the updated Russian candidates preserve the player-name variable, retain `проверил(а)`, and remove only the obsolete gender-selection events. The candidate also applies `ОЗ` (Очки здоровья) and `ОС` (Очки силы) to verified short labels and adds Russian menu labels and the official glossary spelling for Chespin. All new translations remain unapproved and runtime-untested. The `FIGHT` source asset is unresolved; many descriptions and other HP/PP strings remain untranslated.
 
-With the four local `workspace/` datasets present, regenerate the ignored source catalog, selected draft translations, coverage report, and local candidates, then run unit tests:
+The 295- and 350-word information-panel tests rendered; the 527-word test produced a blank panel. These are observations, not universal engine limits. The catalog has 35,216 path-classified English variants out of 281,728 variants; the rest remain undetermined or unsupported. See [Milestone 3G findings](docs/research/milestone-3g.md) and the [owner test checklist](docs/testing/milestone-3g-owner-checklist.md) for exact IDs, hashes, candidate paths, and open work.
+
+To regenerate the ignored Milestone 3G candidate and run the tests, use the four local `workspace/` datasets and source catalog:
 
 ```powershell
-python scripts/build_translation_catalog.py
-python scripts/build_milestone3e_translations.py
-python scripts/validate_translation_data.py --translations translations/early-game.jsonl
-python scripts/report_translation_coverage.py --translations translations/early-game.jsonl --output-dir reports/milestone-3e
-python scripts/generate_milestone3e_checklist.py --translations translations/early-game.jsonl
-python scripts/build_gameplay_pilot.py --include-machine-drafts --translations translations/early-game.jsonl --milestone 3E --output build/milestone-3e/candidate
-python scripts/verify_build_manifest.py build/milestone-3e/candidate/manifest.json
-python scripts/install_milestone3f.py --install
-python scripts/verify_milestone3f_installation.py
+python scripts/build_milestone3g_fixes.py
+python scripts/build_milestone3g_terms.py
+python -X utf8 scripts/validate_translation_data.py --translations translations/early-game.jsonl --translations translations/milestone3g-battle.jsonl
+python scripts/build_gameplay_pilot.py --include-machine-drafts --translations translations/early-game.jsonl --translations translations/milestone3g-battle.jsonl --milestone 3G --output build/milestone-3g/candidate
+python scripts/verify_build_manifest.py build/milestone-3g/candidate/manifest.json
 python -m unittest discover -s tests -v
 ```
 
-The explicit build flag permits installing unapproved test translations; it does not approve them or launch AzaharPlus. The installation script keeps exact-file backups and refuses unsafe rollback. To restore the previous LayeredFS files, close AzaharPlus and run `python scripts/install_milestone3f.py --rollback`. The source catalog and rebuilt full archives contain copyrighted game text and remain under ignored build directories. Another 246,512 variants are still language-undetermined, 66,666 member payloads are not parsed as TextFiles, and two oversized archives were skipped; the full English corpus remains unknown. See [Milestone 3F installation record](docs/testing/milestone-3f-installation.md), the [concise owner runtime checklist](docs/testing/milestone-3f-owner-checklist.md), [Milestone 3E findings](docs/research/milestone-3e.md), and the [full source-linked checklist](docs/testing/milestone-3e-runtime-checklist.md), along with earlier milestone documentation.
+The candidate builder uses update 1.5 for `a/0/7/4` and the base resource for `a/0/8/2` where no update override exists. Candidate archives and source catalogs stay under ignored `build/`; they are not release files. Milestone 3G did not install patches, launch AzaharPlus, or modify saves.
 
 ## Project layout
 

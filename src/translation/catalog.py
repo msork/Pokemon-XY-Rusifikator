@@ -300,7 +300,12 @@ def validate_translation_rows(source: list[dict[str, Any]], translations: list[d
             errors.append(f"missing translation_segments: {rid}")
             continue
         translated_controls = [seg.get("control_words") for seg in segments if isinstance(seg, dict) and "control_words" in seg]
-        if translated_controls != origin["control_events"]:
+        try:
+            expected_controls = expected_translation_controls(row, origin["control_events"])
+        except ValueError as exc:
+            errors.append(f"invalid control adjustment: {rid}: {exc}")
+            expected_controls = origin["control_events"]
+        if translated_controls != expected_controls:
             errors.append(f"control/placeholder sequence mismatch: {rid}")
         for seg in segments:
             if not isinstance(seg, dict) or set(seg) not in ({"text"}, {"control_words"}):
@@ -338,6 +343,25 @@ def terminology_consistency_errors(source_text: str, translation_segments: list[
                     and russian.casefold() not in translated.casefold():
                 errors.append(f"glossary term mismatch ({category}): {source} -> {russian}")
     return errors
+
+
+def expected_translation_controls(row: dict[str, Any], source_events: list[list[str]]) -> list[list[str]]:
+    """Allow only explicitly documented removal of the Gen VI gender-selection event."""
+    adjustments = row.get("control_adjustments", [])
+    if not isinstance(adjustments, list):
+        raise ValueError("control_adjustments must be a list")
+    expected = [list(event) for event in source_events]
+    allowed = ["0010", "0003", "1100", "00FF", "0202"]
+    for adjustment in adjustments:
+        if not isinstance(adjustment, dict) or adjustment.get("action") != "remove_gender_selection":
+            raise ValueError("only remove_gender_selection is supported")
+        if adjustment.get("control_words") != allowed or not adjustment.get("reason"):
+            raise ValueError("gender-selection removal must identify the exact event and reason")
+        try:
+            expected.remove(allowed)
+        except ValueError as exc:
+            raise ValueError("removed gender-selection event is not present in source") from exc
+    return expected
 
 
 def missing_translation_variants(source: list[dict[str, Any]], translations: list[dict[str, Any]]) -> list[tuple[str, str]]:
