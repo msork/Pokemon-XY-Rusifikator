@@ -128,7 +128,11 @@ def main() -> int:
         slot = 0
         for segment in item["source_segments"]:
             if "text" in segment:
-                translated.append({"text": text_parts[slot]})
+                # Empty fragments carry no game word data and are omitted;
+                # this keeps the serialized translation compatible with the
+                # strict builder while preserving every control event.
+                if text_parts[slot]:
+                    translated.append({"text": text_parts[slot]})
                 slot += 1
             else:
                 translated.append({"control_words": list(segment["control_words"])})
