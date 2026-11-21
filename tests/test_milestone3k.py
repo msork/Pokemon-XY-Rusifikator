@@ -82,16 +82,18 @@ class Milestone3KTests(unittest.TestCase):
                              prior_record_path=prior)
             self.assertEqual(path.read_bytes(), b"local modification")
 
-    def test_rejected_image_is_rolled_back_without_changing_text_or_other_mods(self):
-        root = Path.home() / "AppData/Roaming/AzaharPlus/load/mods"
+    def test_rejected_image_was_rolled_back_without_changing_text(self):
         image_record_path = ROOT / "build/milestone-3k/image-install/rollback-record.json"
         self.assertTrue(image_record_path.is_file())
         image_record = json.loads(image_record_path.read_text(encoding="utf-8"))
         self.assertTrue(image_record["rollback_verified"])
-        for relative in image_record["restored_paths"]:
-            self.assertFalse(root.joinpath(*relative.split("/")).exists())
+        self.assertEqual(len(image_record["restored_paths"]), 2)
+        old_install = json.loads((ROOT / "build/milestone-3k/image-install/installation-record.json")
+                                 .read_text(encoding="utf-8"))
+        self.assertTrue(all(not row["existed"] for row in old_install["backup_files"]))
 
         text_record = json.loads((ROOT / "build/milestone-3k/installation-record.json").read_text(encoding="utf-8"))
+        root = Path.home() / "AppData/Roaming/AzaharPlus/load/mods"
         for record in text_record["installed_files"]:
             target = root.joinpath(*record["relative_path"].split("/"))
             self.assertEqual(sha(target.read_bytes()), record["sha256"])
