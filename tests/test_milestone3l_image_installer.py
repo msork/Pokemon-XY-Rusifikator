@@ -110,15 +110,14 @@ class Milestone3LImageInstallerTests(unittest.TestCase):
             bad_manifest.unlink(missing_ok=True)
 
     def test_live_installation_record_contains_only_verified_image_targets(self):
-        install_record = ROOT / "build/milestone-3l/image-install/installation-record.json"
+        install_record = ROOT / "build/milestone-3m/installation/installation-record.json"
         self.assertTrue(install_record.is_file())
         record = json.loads(install_record.read_text(encoding="utf-8"))
-        mods = Path.home() / "AppData/Roaming/AzaharPlus/load/mods"
-        self.assertEqual(len(record["installed_files"]), 2)
+        mods = Path(record["mod_root"])
+        self.assertEqual(len(record["installed_files"]), 4)
         for row in record["installed_files"]:
-            self.assertTrue(row["relative_path"].endswith("/romfs/a/2/4/0"))
-            self.assertEqual(row["sha256"], EXPECTED_HASH)
-            self.assertEqual(digest(mods.joinpath(*row["relative_path"].split("/"))), EXPECTED_HASH)
+            self.assertTrue(row["relative_path"].endswith(("/romfs/a/2/4/0", "/romfs/a/2/3/9")))
+            self.assertEqual(digest(mods.joinpath(*row["relative_path"].split("/"))), row["sha256"])
         text_record = json.loads((ROOT / "build/milestone-3k/installation-record.json")
                                  .read_text(encoding="utf-8"))
         for row in text_record["installed_files"]:
@@ -127,7 +126,15 @@ class Milestone3LImageInstallerTests(unittest.TestCase):
         backup_manifest = json.loads(Path(record["backup_manifest"]).read_text(encoding="utf-8"))
         self.assertEqual({row["relative_path"] for row in backup_manifest["files"]},
                          {row["relative_path"] for row in record["installed_files"]})
-        self.assertTrue(all(not row["existed"] for row in backup_manifest["files"]))
+        backup_rows = {row["relative_path"]: row for row in backup_manifest["files"]}
+        self.assertEqual(len(backup_rows), 4)
+        for relative, row in backup_rows.items():
+            if relative.endswith("/a/2/4/0"):
+                self.assertTrue(row["existed"])
+                self.assertEqual(row["sha256"], EXPECTED_HASH)
+            else:
+                self.assertTrue(relative.endswith("/a/2/3/9"))
+                self.assertFalse(row["existed"])
 
 
 if __name__ == "__main__":
