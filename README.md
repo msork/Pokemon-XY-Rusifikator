@@ -1,6 +1,6 @@
 # Pokemon X/Y Rusifikator
 
-An English-documented project to build a Russian localization for Pokemon X and Pokemon Y. The primary emulator target is AzaharPlus 2126.2-A for Windows. GARC/TextFile extraction, update-1.5 LayeredFS replacement, and Cyrillic rendering for the owner-confirmed alphabet test have been verified in both games. No localization release or bulk translation is available.
+An English-documented project to build a Russian localization for Pokemon X and Pokemon Y. The primary emulator target is AzaharPlus on Linux. Earlier Windows tests verified update 1.5 LayeredFS replacement and Cyrillic rendering for the owner-confirmed alphabet probe in both games. The Linux texture milestone produces offline reviews and previews. It has no release or bulk translation.
 
 ## Hosting and license
 
@@ -15,7 +15,13 @@ Contributions should be made as topic branches through the primary git.gay repos
 
 The four extracted datasets under `workspace/` are read-only local source material, excluded from Git. Original `.3ds` files, update data, saves, extracted resources, and full modified binaries must never enter this repository. Generated inspection data belongs in ignored `build/` or `reports/`. Any eventual release must use a legally reviewed delta format and preserve existing saves and game files.
 
-## Current milestone: 3G
+## Offline texture localization on Linux
+
+The texture tool combines local Tesseract OCR, the project glossary, an offline English-to-Russian model, and Pillow rendering. It reads the Milestone 3N manifest, groups duplicates across X and Y by source SHA-256, protects manual edits, and uses the Milestone 3I encoder to check proposed pixels. Each result has before/after PNGs or a reason it was protected.
+
+See the [Linux and offline texture milestone](docs/testing/linux-offline-artwork.md) for setup, the ten-texture result, the unsupported-format inventory, and the verified AzaharPlus profile. Historical Windows deployment records remain available under `docs/testing/`.
+
+## Historical milestone 3G
 
 Milestone 3F's pilot was owner-tested in Pokémon X with the female protagonist. The owner then reported two malformed bedroom lines and English battle labels/messages. Milestone 3G traced the PC and mirror lines to `a/0/8/2`, member `0055/00`, messages 1 and 3; the updated Russian candidates preserve the player-name variable, retain `проверил(а)`, and remove only the obsolete gender-selection events. The candidate also applies `ОЗ` (Очки здоровья) and `ОС` (Очки силы) to verified short labels and adds Russian menu labels and the official glossary spelling for Chespin. All new translations remain unapproved and runtime-untested. The `FIGHT` source asset is unresolved; many descriptions and other HP/PP strings remain untranslated.
 
@@ -23,16 +29,16 @@ The 295- and 350-word information-panel tests rendered; the 527-word test produc
 
 To regenerate the ignored Milestone 3G candidate and run the tests, use the four local `workspace/` datasets and source catalog:
 
-```powershell
-python scripts/build_milestone3g_fixes.py
-python scripts/build_milestone3g_terms.py
-python -X utf8 scripts/validate_translation_data.py --translations translations/early-game.jsonl --translations translations/milestone3g-battle.jsonl
-python scripts/build_gameplay_pilot.py --include-machine-drafts --translations translations/early-game.jsonl --translations translations/milestone3g-battle.jsonl --milestone 3G --output build/milestone-3g/candidate
-python scripts/verify_build_manifest.py build/milestone-3g/candidate/manifest.json
-python -m unittest discover -s tests -v
+```sh
+python3 scripts/build_milestone3g_fixes.py
+python3 scripts/build_milestone3g_terms.py
+python3 -X utf8 scripts/validate_translation_data.py --translations translations/early-game.jsonl --translations translations/milestone3g-battle.jsonl
+python3 scripts/build_gameplay_pilot.py --include-machine-drafts --translations translations/early-game.jsonl --translations translations/milestone3g-battle.jsonl --milestone 3G --output build/milestone-3g/candidate
+python3 scripts/verify_build_manifest.py build/milestone-3g/candidate/manifest.json
+python3 -m unittest discover -s tests -v
 ```
 
-The candidate builder uses update 1.5 for `a/0/7/4` and the base resource for `a/0/8/2` where no update override exists. The four test archives are installed in the X/Y LayeredFS folders, with verified backups and rollback under ignored `build/milestone-3g/`. They are not release files. AzaharPlus has not been launched for Milestone 3G, and saves were not modified. See the [deployment record](docs/testing/milestone-3g-deployment.md) for hashes and owner checks.
+The candidate builder uses update 1.5 for `a/0/7/4` and the base resource for `a/0/8/2` where no update override exists. The Windows deployment installed four test archives in the X/Y LayeredFS folders and recorded verified backups and rollback under ignored `build/milestone-3g/`. They are not release files. AzaharPlus has not been launched for Milestone 3G, and saves were not modified. See the [deployment record](docs/testing/milestone-3g-deployment.md) for hashes and owner checks.
 
 ## Project layout
 

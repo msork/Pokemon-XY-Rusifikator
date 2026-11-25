@@ -4,10 +4,12 @@ import hashlib
 import json
 import tempfile
 import unittest
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 from scripts.install_milestone3l_image import (EXPECTED_HASH, candidate_targets,
                                                install, rollback)
+
+from milestone_installation_fixtures import recorded_candidate
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "build/milestone-3i/image-candidate/manifest.json"
@@ -109,21 +111,24 @@ class Milestone3LImageInstallerTests(unittest.TestCase):
         finally:
             bad_manifest.unlink(missing_ok=True)
 
-    def test_live_installation_record_contains_only_verified_image_targets(self):
+    def test_historical_installation_record_contains_only_verified_image_targets(self):
         install_record = ROOT / "build/milestone-3m/installation/installation-record.json"
         self.assertTrue(install_record.is_file())
         record = json.loads(install_record.read_text(encoding="utf-8"))
-        mods = Path(record["mod_root"])
+        candidate = ROOT / "build/milestone-3m/candidate"
+        text_candidate = ROOT / "build/milestone-3j/text-candidate"
         self.assertEqual(len(record["installed_files"]), 4)
         for row in record["installed_files"]:
             self.assertTrue(row["relative_path"].endswith(("/romfs/a/2/4/0", "/romfs/a/2/3/9")))
-            self.assertEqual(digest(mods.joinpath(*row["relative_path"].split("/"))), row["sha256"])
+            self.assertEqual(digest(recorded_candidate(candidate, row)), row["sha256"])
         text_record = json.loads((ROOT / "build/milestone-3k/installation-record.json")
                                  .read_text(encoding="utf-8"))
         for row in text_record["installed_files"]:
-            target = mods.joinpath(*row["relative_path"].split("/"))
+            target = recorded_candidate(text_candidate, row)
             self.assertEqual(digest(target), row["sha256"])
-        backup_manifest = json.loads(Path(record["backup_manifest"]).read_text(encoding="utf-8"))
+        backup_id = PureWindowsPath(record["backup_manifest"]).parent.name
+        backup_path = install_record.parent / "installation-backups" / backup_id / "manifest.json"
+        backup_manifest = json.loads(backup_path.read_text(encoding="utf-8"))
         self.assertEqual({row["relative_path"] for row in backup_manifest["files"]},
                          {row["relative_path"] for row in record["installed_files"]})
         backup_rows = {row["relative_path"]: row for row in backup_manifest["files"]}

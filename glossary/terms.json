@@ -18,6 +18,9 @@
       {"source": "Normal", "russian": "Обычно", "status": "provisional_review_required"},
       {"source": "Fast", "russian": "Быстро", "status": "provisional_review_required"}
     ],
+    "texture_ui": [
+      {"source": "Push Start Button", "russian": "Нажмите кнопку пуск", "status": "provisional_review_required"}
+    ],
     "locations": [
       {"source": "Vaniville Town", "russian": "Ванивайл-таун", "status": "provisional_review_required", "note": "Provisional fan-community spelling; official Russian console localization not verified.", "reference_url": "https://pokemon.fandom.com/ru/wiki/Калос", "reference_license": "unverified", "retrieved_date": "2026-11-19"},
       {"source": "Vaniville Pathway", "russian": "Тропа Ванивайл", "status": "provisional_review_required", "note": "Descriptive project draft; no established Russian localization verified."},

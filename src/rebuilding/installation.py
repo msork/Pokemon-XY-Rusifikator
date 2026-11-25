@@ -4,9 +4,36 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from pathlib import Path, PurePosixPath
 import shutil
+import sys
 from typing import Any
+
+
+def azaharplus_paths(appdata: Path | None = None) -> tuple[Path, Path]:
+    """Resolve the active profile and its existing LayeredFS root."""
+    override = os.environ.get("AZAHARPLUS_DATA_DIR")
+    if appdata is not None or (sys.platform == "win32" and not override):
+        profile = appdata if appdata is not None else Path(os.environ["APPDATA"])
+        data = profile / "AzaharPlus"
+    elif override:
+        profile = data = Path(override).expanduser()
+        if not data.is_absolute():
+            raise ValueError("AZAHARPLUS_DATA_DIR must be absolute")
+    elif sys.platform.startswith("linux"):
+        xdg = Path(os.environ.get("XDG_DATA_HOME", ""))
+        if not xdg.is_absolute():
+            xdg = Path.home() / ".local/share"
+        profile = data = xdg / "azaharplus-emu"
+    else:
+        raise ValueError("Set AZAHARPLUS_DATA_DIR to the verified emulator data directory")
+
+    profile = profile.resolve(strict=True)
+    mods = (data / "load/mods").resolve(strict=True)
+    if not mods.is_dir() or profile not in mods.parents:
+        raise ValueError(f"Invalid AzaharPlus LayeredFS root: {mods}")
+    return profile, mods
 
 
 def _safe_target(root: Path, relative: str) -> Path:

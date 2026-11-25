@@ -9,6 +9,8 @@ from pathlib import Path
 from scripts.prepare_milestone3l_fight_reference import SOURCE, build
 from src.rebuilding.textures import read_png_rgba
 
+from milestone_installation_fixtures import recorded_candidate
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -47,7 +49,7 @@ class Milestone3LTests(unittest.TestCase):
             self.assertFalse(manifest["replacement_art_created"])
             self.assertEqual(manifest["native_sha256"], manifest["source_sha256"])
 
-    def test_rejected_milestone3k_image_was_rolled_back_and_text_install_remains_valid(self):
+    def test_recorded_image_rollback_and_text_candidate_hashes(self):
         rollback = json.loads((ROOT / "build/milestone-3k/image-install/rollback-record.json")
                               .read_text(encoding="utf-8"))
         self.assertTrue(rollback["rollback_verified"])
@@ -55,11 +57,11 @@ class Milestone3LTests(unittest.TestCase):
                                        .read_text(encoding="utf-8"))
         self.assertTrue(all(not row["existed"] for row in old_image_install["backup_files"]))
         self.assertEqual(len(rollback["restored_paths"]), 2)
-        mods = Path.home() / "AppData/Roaming/AzaharPlus/load/mods"
+        text_candidate = ROOT / "build/milestone-3j/text-candidate"
         text_record = json.loads((ROOT / "build/milestone-3k/installation-record.json")
                                  .read_text(encoding="utf-8"))
         for row in text_record["installed_files"]:
-            target = mods.joinpath(*row["relative_path"].split("/"))
+            target = recorded_candidate(text_candidate, row)
             self.assertEqual(hashlib.sha256(target.read_bytes()).hexdigest(), row["sha256"])
 
 

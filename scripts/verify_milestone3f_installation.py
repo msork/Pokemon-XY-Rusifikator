@@ -6,10 +6,12 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
+import sys
 from pathlib import Path, PurePosixPath
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from src.rebuilding.installation import azaharplus_paths
 RECORD = ROOT / "build" / "milestone-3f" / "installation-record.json"
 GAMES = {"0004000000055D00", "0004000000055E00"}
 RESOURCES = {"a/0/7/4", "a/0/8/2"}
@@ -28,9 +30,9 @@ def main() -> int:
     parser.add_argument("--record", type=Path, default=RECORD)
     args = parser.parse_args()
     record = json.loads(args.record.read_text(encoding="utf-8"))
-    expected_profile = Path(os.environ["APPDATA"]).resolve()
+    expected_profile, active_mod_root = azaharplus_paths()
     mod_root = Path(record["mod_root"]).resolve(strict=True)
-    if Path(record["appdata_root"]).resolve() != expected_profile or expected_profile not in mod_root.parents:
+    if Path(record["appdata_root"]).resolve() != expected_profile or mod_root != active_mod_root:
         raise ValueError("Installation record is outside the current user profile")
     if record.get("milestone") != "3F" or len(record.get("installed_files", [])) != 4:
         raise ValueError("Unexpected installation record or target count")

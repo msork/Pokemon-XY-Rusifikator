@@ -8,6 +8,8 @@ from pathlib import Path
 
 from scripts.install_milestone3m_images import candidate_targets, install, rollback
 
+from milestone_installation_fixtures import recorded_candidate
+
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "build/milestone-3m/candidate/milestone-3m-manifest.json"
 TEXT_RECORD = ROOT / "build/milestone-3k/installation-record.json"
@@ -101,17 +103,18 @@ class Milestone3MTests(unittest.TestCase):
                 install(bad, appdata=profile, record_root=root / "records", text_record_path=text_record)
             self.assertFalse((profile / "AzaharPlus/load/mods/0004000000055D00/romfs/a/2/4/0").exists())
 
-    def test_live_installation_record_and_milestone_3k_text_hashes(self):
+    def test_historical_installation_record_and_milestone_3k_text_hashes(self):
         install_record_path = ROOT / "build/milestone-3m/installation/installation-record.json"
         self.assertTrue(install_record_path.is_file())
         record = json.loads(install_record_path.read_text(encoding="utf-8"))
-        mods = Path(record["mod_root"])
+        candidate = ROOT / "build/milestone-3m/candidate"
+        text_candidate = ROOT / "build/milestone-3j/text-candidate"
         self.assertEqual(len(record["installed_files"]), 4)
         for row in record["installed_files"]:
-            self.assertEqual(digest(mods.joinpath(*row["relative_path"].split("/"))), row["sha256"])
+            self.assertEqual(digest(recorded_candidate(candidate, row)), row["sha256"])
             self.assertEqual(row["sha256"], HASHES[row["resource"]])
         for row in record["text_files_verified_unchanged"]:
-            self.assertEqual(digest(mods.joinpath(*row["relative_path"].split("/"))), row["sha256"])
+            self.assertEqual(digest(recorded_candidate(text_candidate, row)), row["sha256"])
 
 
 if __name__ == "__main__":

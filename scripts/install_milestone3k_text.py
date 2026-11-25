@@ -6,7 +6,6 @@ import argparse
 from datetime import datetime, timezone
 import hashlib
 import json
-import os
 from pathlib import Path, PurePosixPath
 import shutil
 import sys
@@ -14,7 +13,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from src.extraction.garc import GARC
-from src.rebuilding.installation import backup_targets, rollback_targets
+from src.rebuilding.installation import azaharplus_paths, backup_targets, rollback_targets
 
 BUILD_ROOT = ROOT / "build/milestone-3j/text-candidate"
 RECORD_ROOT = ROOT / "build/milestone-3k"
@@ -97,10 +96,7 @@ def install(manifest_path: Path = BUILD_ROOT / "manifest.json", *,
             appdata: Path | None = None, record_root: Path = RECORD_ROOT,
             prior_record_path: Path = PRIOR_RECORD) -> dict:
     _, targets = candidate_targets(manifest_path)
-    profile = (appdata or Path(os.environ["APPDATA"])).resolve(strict=True)
-    mod_root = (profile / "AzaharPlus/load/mods").resolve(strict=True)
-    if profile not in mod_root.parents or not mod_root.is_dir():
-        raise ValueError(f"AzaharPlus mod root is outside the current profile or missing: {mod_root}")
+    profile, mod_root = azaharplus_paths(appdata)
     record_root = record_root.resolve()
     install_record_path = record_root / "installation-record.json"
     rollback_record_path = record_root / "rollback-record.json"
@@ -169,9 +165,9 @@ def rollback(*, record_root: Path = RECORD_ROOT, appdata: Path | None = None) ->
         raise ValueError("Refusing rollback from a non-3K installation record")
     backup_manifest_path = Path(record["backup_manifest"]).resolve(strict=True)
     backup_manifest = json.loads(backup_manifest_path.read_text(encoding="utf-8"))
-    profile = (appdata or Path(os.environ["APPDATA"])).resolve(strict=True)
+    profile, active_mod_root = azaharplus_paths(appdata)
     mod_root = Path(record["mod_root"]).resolve(strict=True)
-    if Path(record["appdata_root"]).resolve() != profile or profile not in mod_root.parents:
+    if Path(record["appdata_root"]).resolve() != profile or mod_root != active_mod_root:
         raise ValueError("Recorded AzaharPlus mod root is outside the current user profile")
     originals = {row["relative_path"]: row for row in backup_manifest["files"]}
     # Preflight every target and backup before changing any target.
@@ -204,8 +200,18 @@ def main() -> int:
     mode.add_argument("--install", action="store_true")
     mode.add_argument("--rollback", action="store_true")
     parser.add_argument("--manifest", type=Path, default=BUILD_ROOT / "manifest.json")
+    parser.add_argument("--record-root", type=Path, default=RECORD_ROOT,
+                        help="Use a new build directory for the active profile's records")
+    parser.add_argument("--prior-record", type=Path, default=PRIOR_RECORD)
     args = parser.parse_args()
-    result = rollback() if args.rollback else install(args.manifest)
+    if ROOT / "build" not in args.record_root.resolve().parents:
+        parser.error("--record-root must be inside build/")
+    if args.rollback:
+        result = rollback(record_root=args.record_root)
+    else:
+        if not args.prior_record.is_file():
+            parser.error("--prior-record must name an existing 3G installation record")
+        result = install(args.manifest, record_root=args.record_root, prior_record_path=args.prior_record)
     print(json.dumps(result, sort_keys=True, indent=2))
     return 0
 

@@ -5,7 +5,7 @@
 - Write generated data only under `build/`, `reports/`, or another explicitly generated directory.
 - Do not commit game assets, extracted text archives, saves, game images, or derived full binaries. Distributable work must use a legally reviewed delta format.
 - Keep tooling deterministic and document evidence, assumptions, and unverified behavior.
-- Primary runtime target: AzaharPlus 2126.2-A for Windows 11. Do not assume standard Azahar configuration paths or behavior; record local evidence and keep X/Y runtime results distinct.
+- Primary runtime target is the installed AzaharPlus AppImage on Linux. Confirm the build, data directory, and LayeredFS root against local evidence. Keep Pokémon X and Pokémon Y runtime results distinct. Preserve historical Windows deployment and rollback records.
 - Never claim runtime testing without a recorded AzaharPlus test.
 - Primary Git remote is `git@git.gay:msork/Pokemon-XY-Rusifikator.git` over SSH; GitHub is an externally managed mirror. Require SSH authentication, never push directly to GitHub, and never force-push. Check remote state before every push and stop if it contains unrelated history.
 - After completing and testing an authorized milestone, commit the verified source/documentation changes and push the current branch to git.gay automatically. Never push unfinished work, extracted assets, or copyrighted game assets.

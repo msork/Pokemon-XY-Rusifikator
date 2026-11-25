@@ -6,10 +6,12 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
+import sys
 from pathlib import Path, PurePosixPath
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from src.rebuilding.installation import azaharplus_paths
 DEFAULT_RECORD = ROOT / "build" / "milestone-3g" / "installation-record.json"
 TITLE_IDS = {"0004000000055D00", "0004000000055E00"}
 RESOURCES = {"a/0/7/4", "a/0/8/2"}
@@ -28,11 +30,11 @@ def main() -> int:
     parser.add_argument("--record", type=Path, default=DEFAULT_RECORD)
     args = parser.parse_args()
     record = json.loads(args.record.read_text(encoding="utf-8"))
-    profile = Path(os.environ["APPDATA"]).resolve(strict=True)
+    profile, active_mod_root = azaharplus_paths()
     mod_root = Path(record["mod_root"]).resolve(strict=True)
     if record.get("milestone") != "3G" or Path(record["appdata_root"]).resolve() != profile:
         raise ValueError("Installation record is not for this user's Milestone 3G install")
-    if profile not in mod_root.parents or len(record.get("installed_files", [])) != 4:
+    if mod_root != active_mod_root or len(record.get("installed_files", [])) != 4:
         raise ValueError("Unexpected mod root or target count")
 
     backup_manifest_path = Path(record["backup_manifest"]).resolve(strict=True)

@@ -6,13 +6,12 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 from pathlib import Path, PurePosixPath
 import shutil
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from src.rebuilding.installation import backup_targets, rollback_targets  # noqa: E402
+from src.rebuilding.installation import azaharplus_paths, backup_targets, rollback_targets  # noqa: E402
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -56,9 +55,7 @@ def install() -> dict:
     manifest = json.loads(BUILD_MANIFEST.read_text(encoding="utf-8"))
     if manifest.get("milestone") != "3C" or manifest.get("build_state") != "unapproved_runtime_test_candidate":
         raise ValueError("Build manifest is not the expected unapproved Milestone 3C candidate")
-    mod_root = Path(os.environ["APPDATA"]) / "AzaharPlus" / "load" / "mods"
-    if not mod_root.is_dir():
-        raise FileNotFoundError(f"AzaharPlus LayeredFS mod root not found: {mod_root}")
+    _, mod_root = azaharplus_paths()
     if INSTALL_RECORD.exists() or BACKUP_ROOT.exists():
         raise FileExistsError("Installation record or backup exists; refusing to overwrite it")
 
@@ -115,7 +112,7 @@ def rollback() -> list[str]:
     record = json.loads(INSTALL_RECORD.read_text(encoding="utf-8"))
     backup = json.loads(BACKUP_MANIFEST.read_text(encoding="utf-8"))
     mod_root = Path(record["mod_root"]).resolve()
-    if Path(os.environ["APPDATA"]).resolve() not in mod_root.parents:
+    if mod_root != azaharplus_paths()[1]:
         raise ValueError("Recorded mod root is outside the current user profile")
     for item in record["installed_files"]:
         target = mod_root.joinpath(*PurePosixPath(item["relative_path"]).parts)

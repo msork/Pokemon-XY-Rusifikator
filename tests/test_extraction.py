@@ -39,6 +39,11 @@ def make_garc(member_data):
 
 
 class ExtractionTests(unittest.TestCase):
+    def test_lz11_overlapping_back_reference_and_truncated_tail(self):
+        packed = bytes.fromhex("11 08 00 00 20 41 42 50 01")
+        self.assertEqual(decompress(packed), b"ABABABAB")
+        self.assertEqual(decompress(packed[:1] + b"\x07" + packed[2:]), b"ABABABA")
+
     def test_lz11_literal_stream(self):
         self.assertEqual(decompress(b"\x11\x03\x00\x00\x00ABC"), b"ABC")
 

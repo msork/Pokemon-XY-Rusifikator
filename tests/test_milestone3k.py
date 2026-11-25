@@ -9,6 +9,8 @@ from scripts.install_milestone3k_text import (candidate_targets as text_targets,
                                               install as install_text, rollback as rollback_text)
 from src.extraction.garc import GARC
 
+from milestone_installation_fixtures import recorded_candidate
+
 ROOT = Path(__file__).resolve().parents[1]
 TEXT_MANIFEST = ROOT / "build/milestone-3j/text-candidate/manifest.json"
 
@@ -82,7 +84,7 @@ class Milestone3KTests(unittest.TestCase):
                              prior_record_path=prior)
             self.assertEqual(path.read_bytes(), b"local modification")
 
-    def test_rejected_image_was_rolled_back_without_changing_text(self):
+    def test_recorded_image_rollback_and_preserved_text_hashes(self):
         image_record_path = ROOT / "build/milestone-3k/image-install/rollback-record.json"
         self.assertTrue(image_record_path.is_file())
         image_record = json.loads(image_record_path.read_text(encoding="utf-8"))
@@ -93,9 +95,9 @@ class Milestone3KTests(unittest.TestCase):
         self.assertTrue(all(not row["existed"] for row in old_install["backup_files"]))
 
         text_record = json.loads((ROOT / "build/milestone-3k/installation-record.json").read_text(encoding="utf-8"))
-        root = Path.home() / "AppData/Roaming/AzaharPlus/load/mods"
+        root = ROOT / "build/milestone-3j/text-candidate"
         for record in text_record["installed_files"]:
-            target = root.joinpath(*record["relative_path"].split("/"))
+            target = recorded_candidate(root, record)
             self.assertEqual(sha(target.read_bytes()), record["sha256"])
         self.assertTrue((ROOT / "build/milestone-3g/installation-record.json").is_file())
         self.assertFalse((ROOT / "build/milestone-3k/image-candidate").exists())

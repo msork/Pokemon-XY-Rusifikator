@@ -235,7 +235,9 @@ def restore_candidate(output_root: Path = OUTPUT) -> list[str]:
     restored = []
     backup_manifest_path = output_root / "candidate-backup-manifest.json"
     backup_manifest = json.loads(backup_manifest_path.read_text(encoding="utf-8")) if backup_manifest_path.exists() else {"backups": {}}
-    for candidate in output_root.glob("*/romfs/a/*/*/*"):
+    candidates = sorted({path.with_suffix("") if path.suffix == ".bak" else path
+                         for path in output_root.glob("*/romfs/a/*/*/*") if path.is_file()})
+    for candidate in candidates:
         backup = candidate.with_suffix(candidate.suffix + ".bak")
         if backup.is_file():
             relative = candidate.relative_to(output_root).as_posix()

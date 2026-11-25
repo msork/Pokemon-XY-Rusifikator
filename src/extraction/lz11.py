@@ -60,6 +60,13 @@ def decompress(data: bytes, *, max_output: int = 64 * 1024 * 1024) -> bytes:
                 disp = (((first & 0x0F) << 8) | second) + 1
             if disp > len(output):
                 raise LZ11Error("LZ11 back-reference precedes output start")
-            for _ in range(min(length, size - len(output))):
-                output.append(output[-disp])
+            copy_length = min(length, size - len(output))
+            start = len(output) - disp
+            if copy_length <= disp:
+                output.extend(output[start:start + copy_length])
+            else:
+                # Overlapping references repeat the bytes already present at the source.
+                pattern = output[start:]
+                repeats, tail = divmod(copy_length, disp)
+                output.extend(pattern * repeats + pattern[:tail])
     return bytes(output)

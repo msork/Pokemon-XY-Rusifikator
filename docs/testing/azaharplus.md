@@ -1,4 +1,6 @@
-# AzaharPlus 2126.2-A Test Plan
+# Historical AzaharPlus 2126.2-A Windows Test Plan
+
+The [Linux profile and deployment notes](linux-offline-artwork.md) describe the current emulator target. The commands below document earlier Windows runs.
 
 ## Target profile
 

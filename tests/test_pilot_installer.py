@@ -66,7 +66,7 @@ class PilotInstallerTests(unittest.TestCase):
                 patch.object(installer, "BACKUP_ROOT", backups),
                 patch.object(installer, "BACKUP_MANIFEST", backups / "manifest.json"),
                 patch.object(installer, "INSTALL_RECORD", record),
-                patch.dict(installer.os.environ, {"APPDATA": str(appdata)}),
+                patch("os.environ", {"AZAHARPLUS_DATA_DIR": str(appdata / "AzaharPlus")}),
             ):
                 installed = installer.install()
                 saved = json.loads((backups / "manifest.json").read_text(encoding="utf-8"))

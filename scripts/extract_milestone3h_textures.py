@@ -58,6 +58,9 @@ def _morton_xy(value: int) -> tuple[int, int]:
     return x, y
 
 
+MORTON_COORDINATES = tuple(_morton_xy(index) for index in range(64))
+
+
 def _expand5(value: int) -> int:
     return (value << 3) | (value >> 2)
 
@@ -74,7 +77,7 @@ def _color(pixel: bytes, fmt: int) -> tuple[int, int, int, int]:
     raise ValueError(f"Unsupported image format {fmt}; PNG not emitted")
 
 
-def decode_bclim(raw: bytes) -> tuple[int, int, int, bytes]:
+def bclim_layout(raw: bytes) -> tuple[int, int, int, int, int, int, int]:
     clim = raw.rfind(b"CLIM")
     if clim < 0 or clim + 40 != len(raw):
         raise ValueError("BCLIM footer not at expected final 40-byte position")
@@ -87,21 +90,26 @@ def decode_bclim(raw: bytes) -> tuple[int, int, int, bytes]:
         raise ValueError("Invalid BCLIM dimensions")
     if fmt not in (7, 8, 9):
         raise ValueError(f"BCLIM format {fmt} needs another decoder")
-    data = raw[:data_length]
     bytes_per_pixel = 4 if fmt == 9 else 2
     padded_w = 1 << (width - 1).bit_length()
     padded_h = 1 << (height - 1).bit_length()
-    if fmt == 9 and padded_w * padded_h > len(data) // 4:
+    if fmt == 9 and padded_w * padded_h > data_length // 4:
         padded_w = (width + 7) & ~7
         padded_h = (height + 7) & ~7
-    if len(data) != padded_w * padded_h * bytes_per_pixel:
-        raise ValueError(f"Unsupported padded BCLIM dimensions: {width}x{height}, format {fmt}, bytes {len(data)}")
+    if data_length != padded_w * padded_h * bytes_per_pixel or padded_w < 8 or padded_h < 8:
+        raise ValueError(f"Unsupported padded BCLIM dimensions: {width}x{height}, format {fmt}, bytes {data_length}")
+    return width, height, fmt, data_length, padded_w, padded_h, bytes_per_pixel
+
+
+def decode_bclim(raw: bytes) -> tuple[int, int, int, bytes]:
+    width, height, fmt, data_length, padded_w, padded_h, bytes_per_pixel = bclim_layout(raw)
+    data = raw[:data_length]
     tiles_per_row = padded_w // 8
     rgba = bytearray(width * height * 4)
     tile_pixel_bytes = 64 * bytes_per_pixel
     for index in range(padded_w * padded_h):
         tile = index // 64
-        tx, ty = _morton_xy(index % 64)
+        tx, ty = MORTON_COORDINATES[index % 64]
         x = (tile % tiles_per_row) * 8 + tx
         y = (tile // tiles_per_row) * 8 + ty
         if x >= width or y >= height:
