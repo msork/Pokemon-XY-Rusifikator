@@ -12,106 +12,11 @@ from typing import Any
 
 from src.extraction.garc import GARC
 from src.extraction.lz11 import decompress as lz11_decompress
+from src.rebuilding.bclim import decode_bclim, encode_bclim, morton_xy
 
 
 def sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
-
-
-def morton_xy(value: int) -> tuple[int, int]:
-    x = y = 0
-    for bit in range(3):
-        x |= ((value >> (2 * bit)) & 1) << bit
-        y |= ((value >> (2 * bit + 1)) & 1) << bit
-    return x, y
-
-
-def _morton_index(x: int, y: int) -> int:
-    value = 0
-    for bit in range(3):
-        value |= ((x >> bit) & 1) << (2 * bit)
-        value |= ((y >> bit) & 1) << (2 * bit + 1)
-    return value
-
-
-def _expand5(value: int) -> int:
-    return (value << 3) | (value >> 2)
-
-
-def _decode_pixel(pixel: bytes, fmt: int) -> tuple[int, int, int, int]:
-    value = int.from_bytes(pixel, "little")
-    if fmt == 9:
-        return ((value >> 24) & 255, (value >> 16) & 255, (value >> 8) & 255, value & 255)
-    if fmt == 8:
-        return tuple(((value >> shift) & 15) * 17 for shift in (12, 8, 4, 0))  # type: ignore[return-value]
-    if fmt == 7:
-        return (_expand5((value >> 11) & 31), _expand5((value >> 6) & 31),
-                _expand5((value >> 1) & 31), 255 if value & 1 else 0)
-    raise ValueError(f"Unsupported BCLIM format {fmt}; only RGBA4444/8888 are encoded")
-
-
-def decode_bclim(raw: bytes) -> tuple[int, int, int, bytes]:
-    footer = raw.rfind(b"CLIM")
-    if footer < 0 or footer + 40 != len(raw) or raw[footer + 4:footer + 6] != b"\xff\xfe":
-        raise ValueError("Invalid or unsupported BCLIM footer")
-    width, height, fmt, data_len = struct.unpack_from("<HHII", raw, footer + 28)
-    if not width or not height or data_len != footer:
-        raise ValueError("Invalid BCLIM dimensions or pixel-data length")
-    if fmt not in (8, 9):
-        raise ValueError(f"Unsupported BCLIM format {fmt}; only RGBA4444/8888 are supported")
-    bpp = 2 if fmt == 8 else 4
-    padded_w = 1 << (width - 1).bit_length()
-    padded_h = 1 << (height - 1).bit_length()
-    if len(raw[:footer]) != padded_w * padded_h * bpp:
-        raise ValueError(f"Unexpected padded BCLIM storage for {width}x{height}, format {fmt}")
-    tiles_per_row = padded_w // 8
-    rgba = bytearray(width * height * 4)
-    for index in range(padded_w * padded_h):
-        tile = index // 64
-        x_local, y_local = morton_xy(index % 64)
-        x = (tile % tiles_per_row) * 8 + x_local
-        y = (tile // tiles_per_row) * 8 + y_local
-        if x >= width or y >= height:
-            continue
-        start = index * bpp
-        rgba_at = (y * width + x) * 4
-        rgba[rgba_at:rgba_at + 4] = bytes(_decode_pixel(raw[start:start + bpp], fmt))
-    return width, height, fmt, bytes(rgba)
-
-
-def _encode_pixel(rgba: bytes, fmt: int) -> bytes:
-    r, g, b, a = rgba
-    if fmt == 9:
-        return bytes((a, b, g, r))
-    if fmt == 8:
-        channels = [round(channel * 15 / 255) for channel in (r, g, b, a)]
-        value = (channels[0] << 12) | (channels[1] << 8) | (channels[2] << 4) | channels[3]
-        return value.to_bytes(2, "little")
-    raise ValueError(f"Unsupported BCLIM format {fmt}")
-
-
-def encode_bclim(rgba: bytes, width: int, height: int, template: bytes) -> bytes:
-    old_width, old_height, fmt, _ = decode_bclim(template)
-    if (width, height) != (old_width, old_height) or len(rgba) != width * height * 4:
-        raise ValueError("PNG dimensions/RGBA length do not match the source BCLIM")
-    footer = template[-40:]
-    padded_w = 1 << (width - 1).bit_length()
-    padded_h = 1 << (height - 1).bit_length()
-    bpp = 2 if fmt == 8 else 4
-    pixels = bytearray(template[:-40])  # Retain invisible padded texels exactly.
-    tiles_per_row = padded_w // 8
-    for y in range(height):
-        for x in range(width):
-            tile = (y // 8) * tiles_per_row + (x // 8)
-            index = tile * 64 + _morton_index(x % 8, y % 8)
-            src = (y * width + x) * 4
-            encoded = _encode_pixel(rgba[src:src + 4], fmt)
-            dst = index * bpp
-            pixels[dst:dst + bpp] = encoded
-    rebuilt = bytes(pixels) + footer
-    if len(rebuilt) != len(template):
-        raise ValueError("Encoded BCLIM changed source byte length")
-    return rebuilt
 
 
 def _png_unfilter(data: bytes, width: int, height: int, bpp: int) -> bytes:

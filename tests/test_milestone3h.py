@@ -1,4 +1,5 @@
 import json
+import struct
 import unittest
 from pathlib import Path
 
@@ -86,12 +87,13 @@ class Milestone3HTests(unittest.TestCase):
         self.assertEqual(x_update, y_update)
         self.assertNotEqual(x_base, x_update)
 
-    def test_known_png_decoder_rejects_etc1a4_without_claiming_png_export(self):
+    def test_png_decoder_rejects_etc1a4_without_a_payload(self):
         raw = bytearray(40)
         raw[:4] = b"CLIM"
         raw[4:6] = b"\xff\xfe"
-        raw[28:36] = (1).to_bytes(2, "little") + (1).to_bytes(2, "little") + (11).to_bytes(4, "little")
-        with self.assertRaisesRegex(ValueError, "format 11 needs another decoder"):
+        struct.pack_into("<H", raw, 6, 20)
+        struct.pack_into("<II4sIHHII", raw, 12, 40, 1, b"imag", 16, 1, 1, 11, 0)
+        with self.assertRaisesRegex(ValueError, "padded BCLIM storage.*format 11"):
             decode_bclim(bytes(raw))
 
 

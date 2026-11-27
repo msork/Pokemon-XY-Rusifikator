@@ -19,7 +19,7 @@ The four extracted datasets under `workspace/` are read-only local source materi
 
 The texture tool combines local Tesseract OCR, the project glossary, an offline English-to-Russian model, and Pillow rendering. It reads the Milestone 3N manifest, groups duplicates across X and Y by source SHA-256, protects manual edits, and uses the Milestone 3I encoder to check proposed pixels. Each result has before/after PNGs or a reason it was protected.
 
-See the [Linux and offline texture milestone](docs/testing/linux-offline-artwork.md) for setup, the ten-texture result, the unsupported-format inventory, and the verified AzaharPlus profile. Historical Windows deployment records remain available under `docs/testing/`.
+Milestone 3P decoded all 13,040 recognized BCLIM occurrences across both base games and both 1.5 updates. See the [BCLIM rescan and OCR inventory](docs/research/milestone-3p-bclim.md) and the [Linux setup and AzaharPlus profile](docs/testing/linux-offline-artwork.md). Historical Windows deployment records remain under `docs/testing/`.
 
 ## Historical milestone 3G
 

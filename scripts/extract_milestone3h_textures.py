@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from src.extraction.garc import GARC
 from src.extraction.lz11 import decompress
+from src.rebuilding.bclim import UnsupportedBclim, decode_bclim
 
 TITLE_IDS = {"pokemon-x": "0004000000055D00", "pokemon-y": "0004000000055E00"}
 TARGETS = {
@@ -48,76 +49,6 @@ def write_png(path: Path, width: int, height: int, rgba: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(b"\x89PNG\r\n\x1a\n" + _png_chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)) +
                      _png_chunk(b"IDAT", zlib.compress(rows, 9)) + _png_chunk(b"IEND", b""))
-
-
-def _morton_xy(value: int) -> tuple[int, int]:
-    x = y = 0
-    for bit in range(3):
-        x |= ((value >> (2 * bit)) & 1) << bit
-        y |= ((value >> (2 * bit + 1)) & 1) << bit
-    return x, y
-
-
-MORTON_COORDINATES = tuple(_morton_xy(index) for index in range(64))
-
-
-def _expand5(value: int) -> int:
-    return (value << 3) | (value >> 2)
-
-
-def _color(pixel: bytes, fmt: int) -> tuple[int, int, int, int]:
-    if fmt == 9:
-        value = int.from_bytes(pixel, "little")
-        return ((value >> 24) & 255, (value >> 16) & 255, (value >> 8) & 255, value & 255)
-    value = int.from_bytes(pixel, "little")
-    if fmt == 8:
-        return (((value >> 12) & 15) * 17, ((value >> 8) & 15) * 17, ((value >> 4) & 15) * 17, (value & 15) * 17)
-    if fmt == 7:
-        return (_expand5((value >> 11) & 31), _expand5((value >> 6) & 31), _expand5((value >> 1) & 31), 255 if value & 1 else 0)
-    raise ValueError(f"Unsupported image format {fmt}; PNG not emitted")
-
-
-def bclim_layout(raw: bytes) -> tuple[int, int, int, int, int, int, int]:
-    clim = raw.rfind(b"CLIM")
-    if clim < 0 or clim + 40 != len(raw):
-        raise ValueError("BCLIM footer not at expected final 40-byte position")
-    if raw[clim + 4:clim + 6] != b"\xff\xfe":
-        raise ValueError("Unsupported BCLIM byte order")
-    width, height, fmt, data_length = struct.unpack_from("<HHII", raw, clim + 28)
-    if not width or not height or data_length != clim:
-        if data_length != clim:
-            raise ValueError(f"BCLIM pixel region length {data_length} does not end at footer offset {clim}")
-        raise ValueError("Invalid BCLIM dimensions")
-    if fmt not in (7, 8, 9):
-        raise ValueError(f"BCLIM format {fmt} needs another decoder")
-    bytes_per_pixel = 4 if fmt == 9 else 2
-    padded_w = 1 << (width - 1).bit_length()
-    padded_h = 1 << (height - 1).bit_length()
-    if fmt == 9 and padded_w * padded_h > data_length // 4:
-        padded_w = (width + 7) & ~7
-        padded_h = (height + 7) & ~7
-    if data_length != padded_w * padded_h * bytes_per_pixel or padded_w < 8 or padded_h < 8:
-        raise ValueError(f"Unsupported padded BCLIM dimensions: {width}x{height}, format {fmt}, bytes {data_length}")
-    return width, height, fmt, data_length, padded_w, padded_h, bytes_per_pixel
-
-
-def decode_bclim(raw: bytes) -> tuple[int, int, int, bytes]:
-    width, height, fmt, data_length, padded_w, padded_h, bytes_per_pixel = bclim_layout(raw)
-    data = raw[:data_length]
-    tiles_per_row = padded_w // 8
-    rgba = bytearray(width * height * 4)
-    tile_pixel_bytes = 64 * bytes_per_pixel
-    for index in range(padded_w * padded_h):
-        tile = index // 64
-        tx, ty = MORTON_COORDINATES[index % 64]
-        x = (tile % tiles_per_row) * 8 + tx
-        y = (tile // tiles_per_row) * 8 + ty
-        if x >= width or y >= height:
-            continue
-        at = tile * tile_pixel_bytes + (index % 64) * bytes_per_pixel
-        rgba_at = (y * width + x) * 4
-        rgba[rgba_at:rgba_at + 4] = bytes(_color(data[at:at + bytes_per_pixel], fmt))
-    return width, height, fmt, bytes(rgba)
 
 
 def _bundle(raw: bytes) -> list[tuple[str, bytes]]:
@@ -169,9 +100,7 @@ def extract(root: Path, output: Path) -> tuple[list[dict[str, object]], list[dic
                         continue
                     try:
                         width, height, fmt, rgba = decode_bclim(bclim)
-                    except ValueError as error:
-                        if "needs another decoder" not in str(error):
-                            raise
+                    except UnsupportedBclim as error:
                         clim = bclim.rfind(b"CLIM")
                         width, height, fmt = struct.unpack_from("<HHI", bclim, clim + 28)
                         unsupported.append({"game": game, "title_id": title_id, "resource": resource,

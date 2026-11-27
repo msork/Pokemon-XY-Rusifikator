@@ -15,7 +15,8 @@ from collections import Counter, defaultdict
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from scripts.extract_milestone3h_textures import bclim_layout, decode_bclim, write_png
+from scripts.extract_milestone3h_textures import write_png
+from src.rebuilding.bclim import UnsupportedBclim, decode_bclim
 from src.extraction.garc import GARC
 from src.extraction.lz11 import decompress as lz11_decompress
 from src.rebuilding.textures import parse_texture_pack
@@ -153,27 +154,12 @@ def _walk_archive(raw: bytes, archive_path: str, member_prefix: str = "", depth:
             failures.append({"archive_path": archive_path, "nested_member": path_id, "reason": message})
         if packs:
             stats["texture_packs"] += 1
-        for texture in packs:
-            texraw = texture["data"]
-            stats["bclim_members"] += 1
-            try:
-                width, height, fmt, *_ = bclim_layout(texraw)
-            except (ValueError, struct.error) as exc:
-                stats["unsupported_bclim"] += 1
-                failures.append({"archive_path": archive_path, "nested_member": path_id,
-                                 "internal_filename": texture.get("name", "[unknown]"),
-                                 "reason": f"BCLIM decode: {type(exc).__name__}: {exc}",
-                                 "sha256": digest(texraw)})
-                continue
-            stats["decoded_bclim"] += 1
-            textures.append({"nested_member": path_id, "internal_filename": texture.get("name", "[unknown]"),
-                             "raw": texraw, "width": width, "height": height, "format": fmt,
-                             "source_kind": "BCLIM"})
+        textures.extend(_source_texture(texture, path_id) for texture in packs)
     return textures, stats, failures
 
 
 def _walk_large_archive(path: Path, archive_path: str, game: str, version: str,
-                        records: list[dict], canonical_by_hash: dict[str, tuple[str, str]],
+                        records: list[dict], canonical_by_hash: dict[str, tuple[str, str, int, int, int]],
                         png_root: Path) -> tuple[Counter, list[dict]]:
     """Read GARC v4 descriptors from a read-only mmap and process bounded members one at a time."""
     stats: Counter = Counter({"garc_archives": 1, "streamed_garc_archives": 1})
@@ -232,7 +218,7 @@ def _walk_large_archive(path: Path, archive_path: str, game: str, version: str,
                 if decoded.startswith(b"CRAG"):
                     nested, nested_stats, nested_errors = _walk_archive(decoded, archive_path, member_path, 1)
                     for texture in nested:
-                        _append_texture(records, canonical_by_hash, png_root, game, version, archive_path, texture)
+                        _append_texture(records, canonical_by_hash, png_root, game, version, archive_path, texture, stats, failures)
                     stats.update(nested_stats)
                     failures.extend(nested_errors)
                     continue
@@ -243,21 +229,8 @@ def _walk_large_archive(path: Path, archive_path: str, game: str, version: str,
                 if packs:
                     stats["texture_packs"] += 1
                 for texture in packs:
-                    texraw = texture["data"]
-                    stats["bclim_members"] += 1
-                    try:
-                        width, height, fmt, *_ = bclim_layout(texraw)
-                    except (ValueError, struct.error) as exc:
-                        stats["unsupported_bclim"] += 1
-                        failures.append({"archive_path": archive_path, "nested_member": member_path,
-                                         "internal_filename": texture.get("name", "[unknown]"),
-                                         "reason": f"BCLIM decode: {type(exc).__name__}: {exc}", "sha256": digest(texraw)})
-                        continue
-                    stats["decoded_bclim"] += 1
                     _append_texture(records, canonical_by_hash, png_root, game, version, archive_path,
-                                    {"nested_member": member_path, "internal_filename": texture.get("name", "[unknown]"),
-                                     "raw": texraw, "width": width, "height": height, "format": fmt,
-                                     "source_kind": "BCLIM"})
+                                    _source_texture(texture, member_path), stats, failures)
         stats["garc_members"] += total_members
         if q != fatb_end or data_offset >= len(raw):
             failures.append({"archive_path": archive_path, "nested_member": "", "reason": "large GARC descriptor bounds did not terminate at FATB end"})
@@ -277,10 +250,10 @@ def _base_rows(output: Path) -> tuple[list[dict], dict, list[dict]]:
     failures: list[dict] = []
     png_root = output / "png"
     png_root.mkdir(parents=True, exist_ok=True)
-    canonical_by_hash: dict[str, tuple[str, str]] = {}
+    canonical_by_hash: dict[str, tuple[str, str, int, int, int]] = {}
     archive_cache: dict[str, dict] = {}
     seen_archive_hashes: set[str] = set()
-    cache_file = output / "scan-archive-cache-v2.jsonl"
+    cache_file = output / "scan-archive-cache-v3.jsonl"
     if cache_file.exists():
         for line in cache_file.read_text(encoding="utf-8").splitlines():
             if not line.strip():
@@ -288,7 +261,11 @@ def _base_rows(output: Path) -> tuple[list[dict], dict, list[dict]]:
             cached_record = json.loads(line)
             archive_cache[cached_record["sha256"]] = cached_record
             for row in cached_record["rows"]:
-                canonical_by_hash.setdefault(row["sha256"], (row["asset_id"], row["png_path"]))
+                if not (ROOT / row["png_path"]).is_file():
+                    raise ValueError("Cached scanner PNG is missing. Scan to a fresh output directory.")
+                canonical_by_hash.setdefault(row["sha256"], (
+                    row["asset_id"], row["png_path"], row["width"], row["height"], row["format"],
+                ))
     for game, version in DATASETS:
         root = ROOT / "workspace" / game / version
         if not root.is_dir():
@@ -314,7 +291,8 @@ def _base_rows(output: Path) -> tuple[list[dict], dict, list[dict]]:
                         records.append(reused)
                     totals["archive_cache_hits"] += 1
                     totals.update(cached["stats"])
-                    failures.extend({"game": game, "version": version, **row} for row in cached["failures"])
+                    failures.extend({**row, "game": game, "version": version, "archive_path": relative}
+                                    for row in cached["failures"])
                     continue
                 records_start = len(records)
                 stats, errors = _walk_large_archive(path, relative, game, version, records,
@@ -354,37 +332,44 @@ def _base_rows(output: Path) -> tuple[list[dict], dict, list[dict]]:
                 totals.update(stats)
                 failures.extend({"game": game, "version": version, **row} for row in errors)
                 for texture in textures:
-                    _append_texture(records, canonical_by_hash, png_root, game, version, relative, texture)
+                    _append_texture(records, canonical_by_hash, png_root, game, version, relative, texture, totals, failures)
             elif path.suffix.lower() == ".bclim" or _bclim_at_end(scan_data) is not None:
                 totals["standalone_bclim_candidates"] += 1
-                try:
-                    width, height, fmt, *_ = bclim_layout(scan_data)
-                    totals["decoded_bclim"] += 1
-                    _append_texture(records, canonical_by_hash, png_root, game, version, relative,
-                                    {"nested_member": "", "internal_filename": path.name, "raw": scan_data,
-                                     "width": width, "height": height, "format": fmt,
-                                     "source_kind": "standalone BCLIM"})
-                except (ValueError, struct.error) as exc:
-                    totals["unsupported_bclim"] += 1
-                    failures.append({"game": game, "version": version, "archive_path": relative,
-                                     "nested_member": "", "reason": f"BCLIM decode: {type(exc).__name__}: {exc}",
-                                     "sha256": digest(scan_data)})
+                _append_texture(records, canonical_by_hash, png_root, game, version, relative,
+                                {"nested_member": "", "internal_filename": path.name, "raw": scan_data,
+                                 "source_kind": "standalone BCLIM"}, totals, failures)
     totals["archive_content_hashes_unique"] = len(seen_archive_hashes)
     return records, dict(totals), failures
 
 
-def _append_texture(records: list[dict], canonical_by_hash: dict[str, tuple[str, str]], png_root: Path,
-                    game: str, version: str, archive: str, texture: dict) -> None:
-    tex_hash = digest(texture["raw"])
+def _source_texture(texture: dict, member: str) -> dict:
+    return {"nested_member": member, "internal_filename": texture["name"],
+            "raw": texture["data"], "source_kind": "BCLIM"}
+
+
+def _append_texture(records: list[dict], canonical_by_hash: dict[str, tuple[str, str, int, int, int]], png_root: Path,
+                    game: str, version: str, archive: str, texture: dict, stats: Counter, failures: list[dict]) -> None:
+    raw = texture["raw"]
+    tex_hash = digest(raw)
+    stats["bclim_members"] += 1
     if tex_hash not in canonical_by_hash:
+        try:
+            width, height, fmt, rgba = decode_bclim(raw)
+        except ValueError as exc:
+            status = "unsupported" if isinstance(exc, UnsupportedBclim) else "failed"
+            stats[f"{status}_bclim"] += 1
+            fmt = struct.unpack_from("<I", raw, len(raw) - 8)[0] if raw[-40:-36] == b"CLIM" else None
+            failures.append({"game": game, "version": version, "archive_path": archive, "nested_member": texture["nested_member"],
+                             "internal_filename": texture["internal_filename"], "format": fmt,
+                             "bclim_status": status, "reason": f"BCLIM decode: {exc}", "sha256": tex_hash})
+            return
         asset_id = f"T{len(canonical_by_hash) + 1:06d}"
         safe_name = re.sub(r"[^A-Za-z0-9_.-]+", "_", texture["internal_filename"])
         png_path = png_root / f"{asset_id}_{tex_hash[:12]}_{safe_name}.png"
-        if not png_path.exists():
-            width, height, _fmt, rgba = decode_bclim(texture["raw"])
-            write_png(png_path, width, height, rgba)
-        canonical_by_hash[tex_hash] = (asset_id, png_path.relative_to(ROOT).as_posix())
-    asset_id, relative_png = canonical_by_hash[tex_hash]
+        write_png(png_path, width, height, rgba)
+        canonical_by_hash[tex_hash] = (asset_id, png_path.relative_to(ROOT).as_posix(), width, height, fmt)
+    asset_id, relative_png, width, height, fmt = canonical_by_hash[tex_hash]
+    stats["decoded_bclim"] += 1
     filename = texture["internal_filename"]
     category = category_for(archive, filename)
     resource = archive if archive in {"a/2/4/0", "a/2/3/9"} else ""
@@ -395,8 +380,8 @@ def _append_texture(records: list[dict], canonical_by_hash: dict[str, tuple[str,
     confidence = "medium" if english_markers or category != "unclassified_manual_review" else "low"
     records.append({"game": game, "version": version, "archive_path": archive,
                     "nested_member": texture["nested_member"], "internal_filename": filename,
-                    "dimensions": f"{texture['width']}x{texture['height']}",
-                    "width": texture["width"], "height": texture["height"], "format": texture["format"],
+                    "dimensions": f"{width}x{height}",
+                    "width": width, "height": height, "format": fmt,
                     "sha256": tex_hash,
                     "detected_english_text": "filename tokens: " + ", ".join(english_markers) if english_markers else "not OCR-verified; visual review required",
                     "suggested_russian_translation": "", "confidence": confidence,
@@ -450,8 +435,8 @@ def unsupported_formats(failures: list[dict]) -> dict:
         if reason.startswith("BCH container header"):
             groups["BCH header"].append(row)
         elif reason.startswith("BCLIM decode"):
-            fmt = re.search(r"\bformat (\d+)", reason)
-            groups[f"BCLIM {fmt[1]}" if fmt else "BCLIM unknown format"].append(row)
+            fmt = row.get("format")
+            groups[f"BCLIM {fmt}" if fmt is not None else "BCLIM unknown format"].append(row)
     return {label: {"occurrences": len(rows), "locations": rows} for label, rows in sorted(groups.items())}
 
 
@@ -481,7 +466,16 @@ def scan(output: Path = SCAN_OUTPUT) -> dict:
         writer.writeheader()
         writer.writerows(records)
     unique = len({row["asset_id"] for row in records})
-    report = {"milestone": "3N", "source_datasets": [
+    bclim_by_dataset = {}
+    for game, version in DATASETS:
+        counts = Counter({"decoded": 0, "unsupported": 0, "failed": 0})
+        counts["decoded"] = sum((row["game"], row["version"]) == (game, version) for row in records)
+        counts.update(row["bclim_status"] for row in failures
+                      if "bclim_status" in row and (row["game"], row["version"]) == (game, version))
+        bclim_by_dataset[f"{game}/{version}"] = dict(counts)
+    for status in ("decoded", "unsupported", "failed"):
+        totals.setdefault(f"{status}_bclim", 0)
+    report = {"milestone": "3P", "bclim_by_dataset": bclim_by_dataset, "source_datasets": [
         {"game": game, "version": version, "path": (ROOT / "workspace" / game / version).relative_to(ROOT).as_posix()}
         for game, version in DATASETS], "coverage": totals, "texture_provenance_rows": len(records),
         "unique_bclim_images_by_raw_sha256": unique, "duplicates_collapsed_for_png": len(records) - unique,
