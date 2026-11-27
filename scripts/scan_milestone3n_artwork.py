@@ -15,6 +15,7 @@ from collections import Counter, defaultdict
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from scripts.bch_inventory import BchInventory
 from scripts.extract_milestone3h_textures import write_png
 from src.rebuilding.bclim import UnsupportedBclim, decode_bclim
 from src.extraction.garc import GARC
@@ -106,16 +107,23 @@ def _texture_rows(raw: bytes) -> tuple[list[dict], list[str]]:
     return rows, errors
 
 
-def _record_bch(data: bytes, archive: str, member: str, stats: Counter, failures: list[dict]) -> None:
-    if data.startswith(b"BCH\0"):
+def _record_bch(data: bytes, archive: str, member: str, stats: Counter, diagnostics: list[dict],
+                bch: BchInventory | None = None, was_lz11: bool = False) -> None:
+    if not data.startswith(b"BCH\0"):
+        return
+    if bch is None:
         stats["unsupported_bch_containers"] += 1
-        failures.append({"archive_path": archive, "nested_member": member,
-                         "reason": "BCH container header; embedded textures unsupported",
-                         "sha256": digest(data)})
+        diagnostics.append({"archive_path": archive, "nested_member": member,
+                            "reason": "BCH container header; embedded textures unsupported",
+                            "sha256": digest(data)})
+    else:
+        stats["bch_headers"] += 1
+        diagnostics.append({"archive_path": archive, "nested_member": member,
+                            "bch_sha256": bch.inspect(data), "member_lz11": was_lz11})
 
 
 def _walk_archive(raw: bytes, archive_path: str, member_prefix: str = "", depth: int = 0,
-                  max_depth: int = 6) -> tuple[list[dict], Counter, list[dict]]:
+                  max_depth: int = 6, bch: BchInventory | None = None) -> tuple[list[dict], Counter, list[dict]]:
     textures: list[dict] = []
     stats: Counter = Counter()
     failures: list[dict] = []
@@ -134,6 +142,7 @@ def _walk_archive(raw: bytes, archive_path: str, member_prefix: str = "", depth:
     for member in archive.members:
         member_id = f"{member.entry_id}/{member.subfile_id}"
         path_id = f"{member_prefix}/{member_id}".strip("/")
+        was_lz = False
         try:
             decoded, was_lz = _unpack(member.data)
             if was_lz:
@@ -143,12 +152,12 @@ def _walk_archive(raw: bytes, archive_path: str, member_prefix: str = "", depth:
                              "reason": f"LZ11 decode: {type(exc).__name__}: {exc}"})
             decoded = member.data
         if decoded.startswith(b"CRAG"):
-            nested, nested_stats, nested_failures = _walk_archive(decoded, archive_path, path_id, depth + 1, max_depth)
+            nested, nested_stats, nested_failures = _walk_archive(decoded, archive_path, path_id, depth + 1, max_depth, bch)
             textures.extend(nested)
             stats.update(nested_stats)
             failures.extend(nested_failures)
             continue
-        _record_bch(decoded, archive_path, path_id, stats, failures)
+        _record_bch(decoded, archive_path, path_id, stats, failures, bch, was_lz)
         packs, pack_errors = _texture_rows(decoded)
         for message in pack_errors:
             failures.append({"archive_path": archive_path, "nested_member": path_id, "reason": message})
@@ -160,7 +169,7 @@ def _walk_archive(raw: bytes, archive_path: str, member_prefix: str = "", depth:
 
 def _walk_large_archive(path: Path, archive_path: str, game: str, version: str,
                         records: list[dict], canonical_by_hash: dict[str, tuple[str, str, int, int, int]],
-                        png_root: Path) -> tuple[Counter, list[dict]]:
+                        png_root: Path, bch: BchInventory | None = None) -> tuple[Counter, list[dict]]:
     """Read GARC v4 descriptors from a read-only mmap and process bounded members one at a time."""
     stats: Counter = Counter({"garc_archives": 1, "streamed_garc_archives": 1})
     failures: list[dict] = []
@@ -208,21 +217,22 @@ def _walk_large_archive(path: Path, archive_path: str, game: str, version: str,
                     continue
                 data = bytes(raw[data_offset+start:data_offset+start+length])
                 decoded = data
+                was_lz = False
                 try:
                     if data[:1] == b"\x11":
-                        decoded = lz11_decompress(data)
+                        decoded, was_lz = _unpack(data)
                         stats["lz11_members"] += 1
                 except (ValueError, struct.error) as exc:
                     failures.append({"archive_path": archive_path, "nested_member": member_path,
                                      "reason": f"LZ11 decode: {type(exc).__name__}: {exc}"})
                 if decoded.startswith(b"CRAG"):
-                    nested, nested_stats, nested_errors = _walk_archive(decoded, archive_path, member_path, 1)
+                    nested, nested_stats, nested_errors = _walk_archive(decoded, archive_path, member_path, 1, bch=bch)
                     for texture in nested:
                         _append_texture(records, canonical_by_hash, png_root, game, version, archive_path, texture, stats, failures)
                     stats.update(nested_stats)
                     failures.extend(nested_errors)
                     continue
-                _record_bch(decoded, archive_path, member_path, stats, failures)
+                _record_bch(decoded, archive_path, member_path, stats, failures, bch, was_lz)
                 packs, pack_errors = _texture_rows(decoded)
                 failures.extend({"archive_path": archive_path, "nested_member": member_path, "reason": item}
                                 for item in pack_errors)
@@ -244,7 +254,7 @@ def _walk_large_archive(path: Path, archive_path: str, game: str, version: str,
     return stats, failures
 
 
-def _base_rows(output: Path) -> tuple[list[dict], dict, list[dict]]:
+def _base_rows(output: Path, bch: BchInventory | None) -> tuple[list[dict], dict, list[dict]]:
     records: list[dict] = []
     totals: Counter = Counter()
     failures: list[dict] = []
@@ -254,7 +264,11 @@ def _base_rows(output: Path) -> tuple[list[dict], dict, list[dict]]:
     archive_cache: dict[str, dict] = {}
     seen_archive_hashes: set[str] = set()
     cache_file = output / "scan-archive-cache-v3.jsonl"
-    if cache_file.exists():
+    if bch is not None:
+        # BCH detection re-inspects each distinct archive. The per-run cache
+        # still reuses identical archive contents across games and versions.
+        cache_file = None
+    if cache_file is not None and cache_file.exists():
         for line in cache_file.read_text(encoding="utf-8").splitlines():
             if not line.strip():
                 continue
@@ -296,15 +310,19 @@ def _base_rows(output: Path) -> tuple[list[dict], dict, list[dict]]:
                     continue
                 records_start = len(records)
                 stats, errors = _walk_large_archive(path, relative, game, version, records,
-                                                    canonical_by_hash, png_root)
+                                                    canonical_by_hash, png_root, bch)
                 totals.update(stats)
+                for row in errors:
+                    if "bch_sha256" in row:
+                        row["archive_sha256"] = archive_sha256
                 failures.extend({"game": game, "version": version, **row} for row in errors)
                 cached_rows = [dict(row) for row in records[records_start:]]
                 archive_cache[archive_sha256] = {"sha256": archive_sha256, "rows": cached_rows,
                                                  "stats": dict(stats), "failures": errors}
-                with cache_file.open("a", encoding="utf-8", newline="\n") as cache_stream:
-                    cache_stream.write(json.dumps(archive_cache[archive_sha256],
-                                                  ensure_ascii=False, sort_keys=True) + "\n")
+                if cache_file is not None:
+                    with cache_file.open("a", encoding="utf-8", newline="\n") as cache_stream:
+                        cache_stream.write(json.dumps(archive_cache[archive_sha256],
+                                                      ensure_ascii=False, sort_keys=True) + "\n")
                 continue
             if size > 128 * 1024 * 1024:
                 totals["oversize_non_garc_files_not_parsed"] += 1
@@ -314,9 +332,10 @@ def _base_rows(output: Path) -> tuple[list[dict], dict, list[dict]]:
             raw = path.read_bytes()
             totals["non_garc_source_bytes_scanned"] += len(raw)
             scan_data = raw
+            was_lz = False
             try:
                 if raw[:1] == b"\x11":
-                    scan_data, _was_lz = _unpack(raw)
+                    scan_data, was_lz = _unpack(raw)
                     totals["lz11_files"] += 1
             except (ValueError, struct.error) as exc:
                 totals["top_level_decompression_failures"] += 1
@@ -326,10 +345,19 @@ def _base_rows(output: Path) -> tuple[list[dict], dict, list[dict]]:
                                      (b"CGFX", "cgfx_magic_occurrences"), (b"BCMDL", "bcmdl_magic_occurrences"),
                                      (b"CLIM", "clim_magic_occurrences")):
                 totals[label] += raw.count(signature)
-            _record_bch(scan_data, relative, "", totals, failures)
+            if bch is not None:
+                bch.record_incidental(raw, game, version, relative)
+            if scan_data.startswith(b"BCH\0"):
+                hits = []
+                _record_bch(scan_data, relative, "", totals, hits, bch, was_lz)
+                failures.extend(dict(hit, game=game, version=version, archive_sha256=digest(raw)) for hit in hits)
             if scan_data.startswith(b"CRAG"):
-                textures, stats, errors = _walk_archive(scan_data, relative)
+                textures, stats, errors = _walk_archive(scan_data, relative, bch=bch)
                 totals.update(stats)
+                for row in errors:
+                    if "bch_sha256" in row:
+                        row["archive_sha256"] = digest(raw)
+                        row["outer_lz11"] = was_lz
                 failures.extend({"game": game, "version": version, **row} for row in errors)
                 for texture in textures:
                     _append_texture(records, canonical_by_hash, png_root, game, version, relative, texture, totals, failures)
@@ -449,9 +477,16 @@ def _generated_output(output: Path) -> Path:
     return output
 
 
-def scan(output: Path = SCAN_OUTPUT) -> dict:
+def scan(output: Path = SCAN_OUTPUT, *, include_bch: bool = False) -> dict:
     output = _generated_output(output)
-    records, totals, failures = _base_rows(output)
+    bch = BchInventory(output, ROOT) if include_bch else None
+    records, totals, failures = _base_rows(output, bch)
+    if bch is not None:
+        occurrences = [row for row in failures if "bch_sha256" in row]
+        failures = [row for row in failures if "bch_sha256" not in row]
+        bch_report = bch.publish(occurrences)
+        for game, version in DATASETS:
+            bch_report["container_occurrences_by_dataset"].setdefault(f"{game}/{version}", {"headers": 0})
     hash_counts = Counter(row["sha256"] for row in records)
     for row in records:
         row["deduplicated_source_count"] = hash_counts[row["sha256"]]
@@ -475,7 +510,7 @@ def scan(output: Path = SCAN_OUTPUT) -> dict:
         bclim_by_dataset[f"{game}/{version}"] = dict(counts)
     for status in ("decoded", "unsupported", "failed"):
         totals.setdefault(f"{status}_bclim", 0)
-    report = {"milestone": "3P", "bclim_by_dataset": bclim_by_dataset, "source_datasets": [
+    report = {"milestone": "3Q" if include_bch else "3P", "bclim_by_dataset": bclim_by_dataset, "source_datasets": [
         {"game": game, "version": version, "path": (ROOT / "workspace" / game / version).relative_to(ROOT).as_posix()}
         for game, version in DATASETS], "coverage": totals, "texture_provenance_rows": len(records),
         "unique_bclim_images_by_raw_sha256": unique, "duplicates_collapsed_for_png": len(records) - unique,
@@ -487,6 +522,10 @@ def scan(output: Path = SCAN_OUTPUT) -> dict:
         "output_root": output.relative_to(ROOT).as_posix(), "json_manifest": json_path.relative_to(ROOT).as_posix(),
         "csv_manifest": csv_path.relative_to(ROOT).as_posix(), "contact_sheets": contact_sheets,
         "pngs_metadata_free_rgba": True}
+    if bch is not None:
+        report["bch"] = bch_report
+        report["scope_warning"] = ("Recognizes BCH headers at inspected file and expanded GARC member starts. "
+                                   "Other container layouts and BCH nested inside unrecognized data remain outside coverage.")
     (output / "scan-report.json").write_text(json.dumps(report, ensure_ascii=False, sort_keys=True, indent=2) + "\n",
                                               encoding="utf-8", newline="\n")
     (output / "unsupported-formats.json").write_text(
@@ -527,13 +566,18 @@ def annotate_existing(output: Path = OUTPUT) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--bch", action="store_true", help="Validate BCH and export its PICA surfaces")
     parser.add_argument("--annotate-existing", action="store_true",
                         help="Add queue/exclusion metadata to completed manifests without rescanning assets")
     args = parser.parse_args()
     if args.annotate_existing:
         print(json.dumps(annotate_existing(args.output or OUTPUT), sort_keys=True, indent=2))
         return 0
-    result = scan(args.output or SCAN_OUTPUT)
+    if args.bch and args.output is None:
+        parser.error("--bch requires a dedicated --output directory under build/")
+    result = scan(args.output or SCAN_OUTPUT, include_bch=args.bch)
+    if args.bch:
+        print(json.dumps(result["bch"], indent=2, sort_keys=True))
     print(json.dumps({key: result[key] for key in ("coverage", "texture_provenance_rows",
           "unique_bclim_images_by_raw_sha256", "duplicates_collapsed_for_png", "unsupported_or_failed_count",
           "json_manifest", "csv_manifest", "output_root")}, ensure_ascii=False, sort_keys=True, indent=2))

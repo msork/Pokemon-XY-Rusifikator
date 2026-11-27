@@ -214,6 +214,17 @@ def _decode(raw: bytes, layout: Layout) -> bytes:
     return bytes(rgba)
 
 
+def decode_tiled_rgba(raw: bytes, width: int, height: int, fmt: int) -> bytes:
+    """Decode a raw, whole-tile PICA plane using the shared BCLIM format mapping."""
+    if min(width, height) < 8 or width % 8 or height % 8:
+        raise ValueError("PICA plane dimensions must contain whole 8x8 tiles")
+    if not 0 <= fmt < len(BITS_PER_TEXEL):
+        raise UnsupportedBclim(f"Unsupported PICA plane format {fmt}")
+    if width * height * BITS_PER_TEXEL[fmt] != len(raw) * 8:
+        raise ValueError("PICA plane length does not match its dimensions and format")
+    return _decode(raw, Layout(width, height, fmt, len(raw), width, height))
+
+
 def decode_bclim(raw: bytes) -> tuple[int, int, int, bytes]:
     layout = bclim_layout(raw)
     return layout.width, layout.height, layout.format, _decode(raw, layout)

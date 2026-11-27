@@ -21,6 +21,8 @@ The texture tool combines local Tesseract OCR, the project glossary, an offline 
 
 Milestone 3P decoded all 13,040 recognized BCLIM occurrences across both base games and both 1.5 updates. See the [BCLIM rescan and OCR inventory](docs/research/milestone-3p-bclim.md) and the [Linux setup and AzaharPlus profile](docs/testing/linux-offline-artwork.md). Historical Windows deployment records remain under `docs/testing/`.
 
+Milestone 3Q adds BCH texture discovery and offline OCR across the same four datasets. See the [BCH coverage and replacement evidence](docs/research/milestone-3q-bch.md).
+
 ## Historical milestone 3G
 
 Milestone 3F's pilot was owner-tested in Pokémon X with the female protagonist. The owner then reported two malformed bedroom lines and English battle labels/messages. Milestone 3G traced the PC and mirror lines to `a/0/8/2`, member `0055/00`, messages 1 and 3; the updated Russian candidates preserve the player-name variable, retain `проверил(а)`, and remove only the obsolete gender-selection events. The candidate also applies `ОЗ` (Очки здоровья) and `ОС` (Очки силы) to verified short labels and adds Russian menu labels and the official glossary spelling for Chespin. All new translations remain unapproved and runtime-untested. The `FIGHT` source asset is unresolved; many descriptions and other HP/PP strings remain untranslated.

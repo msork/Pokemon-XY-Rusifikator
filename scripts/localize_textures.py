@@ -93,6 +93,8 @@ def process(row: dict, args, translate, directory: Path) -> dict:
     (directory / "before.png").write_bytes(before)
     after = before
     try:
+        if row.get("source_kind") == "BCH":
+            raise ReviewRequired("BCH previews require a separate artwork review")
         raw = original_texture(row)
         if row["format"] not in (8, 9):
             raise ReviewRequired("BCLIM format is outside the 3I encoder subset")
@@ -190,12 +192,15 @@ def ocr_inventory(args) -> Path:
         previous = baseline.get(raw_hash)
         if previous and file_digest(scanner_png(previous)) == png_hash:
             return None
+        fields = ("game", "version", "archive_path", "nested_member", "internal_filename", "asset_id")
+        if row.get("source_kind") == "BCH":
+            fields += ("bch_sha256", "archive_sha256", "member_lz11", "texture_index",
+                       "descriptor_offset", "face", "mip_level", "mipmap_count", "data_offset",
+                       "data_length", "payload_sha256")
         item = {
             "sha256": raw_hash, "png_sha256": png_hash, "png_path": row["png_path"], "format": row["format"],
             "change": "corrected_preview" if previous else "newly_decoded",
-            "occurrences": [{key: ref[key] for key in
-                             ("game", "version", "archive_path", "nested_member", "internal_filename", "asset_id")}
-                            for ref in occurrences],
+            "occurrences": [{key: ref[key] for key in fields} for ref in occurrences],
         }
         if is_protected(raw_hash, occurrences, protected):
             return dict(item, status="protected", lines=[])
