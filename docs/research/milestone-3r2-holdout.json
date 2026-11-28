@@ -1,0 +1,124 @@
+[
+  {
+    "sha256": "979048d1734af882c4aee9968d9aebf7fcb1cf7d1b665281519649fa5f11dc9e",
+    "id": "T003391",
+    "english": "NEW",
+    "russian": [
+      "Новое",
+      "Новый",
+      "Новинка"
+    ],
+    "group": "decorated new badge"
+  },
+  {
+    "sha256": "e4c0f253d48e035627e39b05e806d45d93dedcb4d157e2b9b35515c4febab6e0",
+    "id": "T003469",
+    "english": "COLOR",
+    "russian": [
+      "Цвет"
+    ],
+    "group": "glowing color badge"
+  },
+  {
+    "sha256": "4ca6f7d1ffc549a1c1d3196304cc0ca409d09846cb70ba92f7bb472a3f4fe807",
+    "id": "T003470",
+    "english": "SHAPE",
+    "russian": [
+      "Форма"
+    ],
+    "group": "glowing shape badge"
+  },
+  {
+    "sha256": "12815d19993836c6b1c669716b48e075beb60853fcccc5d76e08b1906f1ed130",
+    "id": "T003478",
+    "english": "NATIONAL POKÉDEX",
+    "russian": [
+      "Национальный покедекс"
+    ],
+    "group": "multicolor outline"
+  },
+  {
+    "sha256": "d72e610e3d80ae5fd31db6f00c65b26246549e5617fea1f249e46c0a05281634",
+    "id": "T003480",
+    "english": "HABITAT",
+    "russian": [
+      "Среда обитания",
+      "Место обитания",
+      "Ареал"
+    ],
+    "group": "outlined menu"
+  },
+  {
+    "sha256": "5366fecfb392e4519d7b7b26a069cf39383bd4cff026b9cc648aa88b33088699",
+    "id": "T003481",
+    "english": "APPEARANCE/CRY",
+    "russian": [
+      "Внешность и крик",
+      "Внешний вид и крик",
+      "Внешность крик",
+      "Внешний вид крик"
+    ],
+    "group": "outlined compound label"
+  },
+  {
+    "sha256": "efaf0de54542f7c453feacda7896799c5017e1dc704b3eb85bd365ee03d619ce",
+    "id": "T003100",
+    "english": "POKÉRUS",
+    "russian": [
+      "Покерус",
+      "Покэрус"
+    ],
+    "group": "tiny status label"
+  },
+  {
+    "sha256": "7c25c0e1d95e73518727e652ef1a659c2762a694edecb57229032cdd3e633d13",
+    "id": "T003125",
+    "english": "K.O.",
+    "russian": [
+      "Нокаут",
+      "Н. О.",
+      "Нокаутирован",
+      "Без сил",
+      "Н. О"
+    ],
+    "group": "tiny abbreviated badge"
+  },
+  {
+    "sha256": "76224b1bd5a63bf2fcc8857d920faf60bc964e03afb4fd777290f151b9869e11",
+    "id": "T003568",
+    "english": "Congratulations on becoming Pokémon League Champion!",
+    "russian": [
+      "Поздравляем со званием чемпиона Лиги покемонов",
+      "Поздравляем с получением звания чемпиона Лиги покемонов",
+      "Поздравляем Вы стали чемпионом Лиги покемонов",
+      "Поздравляем с победой в Лиге покемонов"
+    ],
+    "group": "two-line illustrated lettering"
+  },
+  {
+    "sha256": "caef0fca2512caef54ef62fd15e690511aec162f15a396084ecc5ae665524c8f",
+    "id": "T004709",
+    "english": "SP. DEF",
+    "russian": [
+      "Сп. защита",
+      "Спецзащита",
+      "Специальная защита",
+      "Сп. защ."
+    ],
+    "group": "small ETC1A4 stat"
+  },
+  {
+    "sha256": "15132a20e18fcb5b3a67c086f10624ed14d875318e6f5b00d82234631fcb2507",
+    "id": "T003564",
+    "english": null,
+    "russian": [],
+    "group": "ambiguous end-card control"
+  },
+  {
+    "sha256": "22c82e1392ff04ae48ecc5762e2b64626579cd941665c491c1a7a4672901f1e5",
+    "id": "T003453",
+    "english": null,
+    "russian": [],
+    "group": "French locale-code control"
+  }
+]

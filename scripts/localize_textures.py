@@ -22,8 +22,10 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from scripts.scan_milestone3n_artwork import DATASETS, OUTPUT, _texture_rows, _unpack, digest, file_digest
 from src.extraction.garc import GARC
-from src.rebuilding.artwork_localization import (ReviewRequired, Translator, classify_english, local_paddle,
-                                                 multi_pass_ocr, ocr, render, text_key, _ROTATIONS)
+from src.rebuilding.artwork_localization import (
+    ReviewRequired, Translator, _ROTATIONS, check_russian_spelling, classify_english, local_paddle,
+    merge_ocr_observations, ocr, paddle_observations, render, tesseract_observations, text_key,
+)
 from src.rebuilding.artwork_rendering import reference_style, render_enhanced
 from src.rebuilding.bclim import ETC_FORMATS, recompress_bclim_etc
 from src.rebuilding.textures import decode_bclim, encode_bclim
@@ -160,14 +162,14 @@ def style_references(rows: dict, root: Path) -> tuple[list[dict], dict]:
             raise ValueError("Style reference must stay in the canonical directory")
         fingerprints[name] = {"original": file_digest(before), "edited": file_digest(after)}
         with Image.open(before) as original, Image.open(after) as edited:
-            refs.append(reference_style(original.convert("RGBA"), edited.convert("RGBA")))
+            refs.append(dict(reference_style(original.convert("RGBA"), edited.convert("RGBA")), name=name))
     return refs, fingerprints
 
 
 def texture_context(row: dict) -> tuple[str, ...]:
     name = row["internal_filename"]
-    if name.startswith(("zkn_", "p_zkn_")):
-        return ("ui", "battle_ui")
+    if name.startswith(("zkn_", "p_zkn_", "compare_icon")):
+        return ("artwork_pokedex", "ui", "battle_ui")
     if name.startswith("vs_"):
         return ("artwork_battle_results", "battle_terminology")
     if name.startswith(("sick_", "dead_", "exp_", "hp_")):
@@ -202,6 +204,43 @@ def russian_key(text: str) -> str:
     return " ".join(re.findall(r"[^\W_]+", unicodedata.normalize("NFC", text.casefold())))
 
 
+def cached_ocr_stage(directory: Path, key_parts: list, compute):
+    key = digest(json_bytes(key_parts))
+    path = directory / (key + ".json")
+    if path.is_file():
+        return json.loads(path.read_bytes())
+    result = compute()
+    with tempfile.TemporaryDirectory(prefix=".ocr-", dir=directory) as staging:
+        candidate = Path(staging) / "observations.json"
+        candidate.write_bytes(json_bytes(result))
+        candidate.replace(path)
+    return result
+
+
+def enhanced_read(image: Image.Image, args, language: str) -> list[dict]:
+    image_hash = digest(json_bytes(image.size) + image.tobytes())
+    tess_key = ["tesseract", image_hash, language, args.ocr_inputs["tesseract"][language]]
+    tess = cached_ocr_stage(args.stage_cache, tess_key,
+                            lambda: tesseract_observations(image, args.tesseract, args.tessdata, language))
+    config = args.paddle_backends.get(language)
+    if config is None:
+        return merge_ocr_observations(tess)
+    elif language not in args.paddle_engines:
+        # Lazy even on warm invocations. The closure is invoked only if the
+        # per-image Paddle observations are missing from the cache.
+        def load(image):
+            if language not in args.paddle_engines:
+                model, name, device = config
+                args.paddle_engines[language] = local_paddle(model, name, device)
+            return args.paddle_engines[language](image)
+        recognize = load
+    else:
+        recognize = args.paddle_engines[language]
+    paddle_key = ["paddle", tess_key, digest(json_bytes(tess)), args.ocr_inputs["paddle"][language]]
+    independent = cached_ocr_stage(args.stage_cache, paddle_key, lambda: paddle_observations(image, tess, recognize))
+    return merge_ocr_observations(tess + independent)
+
+
 def process_enhanced(row: dict, args, translate: Translator, directory: Path, *, protected: bool = False) -> dict:
     with Image.open(scanner_png(row)) as png:
         original = png.convert("RGBA")
@@ -210,7 +249,7 @@ def process_enhanced(row: dict, args, translate: Translator, directory: Path, *,
     after = before
     result = {"status": "review", "lines": []}
     try:
-        evidence = multi_pass_ocr(original, args.tesseract, args.tessdata, paddle=args.paddle_recognizer)
+        evidence = enhanced_read(original, args, "eng")
         vocabulary = {word for phrase in translate.terms for word in text_key(phrase).split()}
         classification, lines = classify_english(evidence, row["internal_filename"], vocabulary)
         result.update(classification=classification, evidence=evidence, lines=lines)
@@ -221,6 +260,12 @@ def process_enhanced(row: dict, args, translate: Translator, directory: Path, *,
             raise ReviewRequired("English lettering was not confirmed")
         context = texture_context(row)
         result["lines"] = lines = translated_lines(lines, translate, context)
+        if args.spell_dictionary:
+            misses = check_russian_spelling(" ".join(line["russian"] for line in lines),
+                                            args.hunspell, args.spell_dictionary)
+            result["spelling"] = {"unknown_words": misses}
+            if misses:
+                raise ReviewRequired("Russian dictionary requires review of: " + ", ".join(misses))
         if classification == "english_review":
             raise ReviewRequired("OCR evidence needs agreement before rendering")
         if row.get("source_kind") == "BCH":
@@ -238,6 +283,9 @@ def process_enhanced(row: dict, args, translate: Translator, directory: Path, *,
         draft = png_bytes(rendered)
         (directory / "draft.png").write_bytes(draft)
         result["draft_sha256"] = digest(draft)
+        mask_png = png_bytes(mask)
+        (directory / "edit-mask.png").write_bytes(mask_png)
+        result["edit-mask_sha256"] = digest(mask_png)
         proposed = rendered.tobytes()
         try:
             if fmt in ETC_FORMATS:
@@ -264,7 +312,7 @@ def process_enhanced(row: dict, args, translate: Translator, directory: Path, *,
             region = verified.crop(profile["region"])
             if line["rotation"]:
                 region = region.transpose(_ROTATIONS[line["rotation"]])
-            readback = multi_pass_ocr(region, args.tesseract, args.tessdata, language="rus")
+            readback = enhanced_read(region, args, "rus")
             matched = any(russian_key(observation["text"]) == russian_key(line["russian"])
                           and observation["confidence"] >= 75 and len(observation["passes"]) >= 2
                           for observation in readback)
@@ -469,11 +517,16 @@ def run(args) -> Path:
         by_id[row["asset_id"]].add(raw_hash)
         groups[raw_hash].append(row)
     labels = None
-    if args.benchmark:
-        entries = json.loads(args.benchmark.read_bytes())
+    if args.benchmark or args.holdout:
+        entries = json.loads((args.benchmark or args.holdout).read_bytes())
         labels = {row["sha256"]: row for row in entries}
-        if len(entries) != 30 or len(labels) != 30 or not labels.keys() <= groups.keys():
-            raise ValueError("Benchmark requires thirty unique source fingerprints in the selected manifest")
+        size_ok = 8 <= len(entries) <= 30 if args.holdout else len(entries) == 30
+        if not size_ok or len(labels) != len(entries) or not labels.keys() <= groups.keys():
+            raise ValueError("Evaluation requires unique bounded labels in the selected manifest")
+        if args.holdout:
+            benchmark = json.loads((ROOT / "docs/research/milestone-3r-benchmark.json").read_bytes())
+            if labels.keys() & {row["sha256"] for row in benchmark}:
+                raise ValueError("Holdout overlaps the thirty-texture benchmark")
         hashes = sorted(labels)
     elif args.pilot:
         if any(raw_hash not in groups for raw_hash in PILOT_HASHES):
@@ -509,7 +562,9 @@ def run(args) -> Path:
     if args.enhanced:
         args.style_profiles, references = style_references(groups, args.style_references)
         args.fonts = [args.font, *args.match_font]
-        args.paddle_recognizer = None
+        args.paddle_backends = {}
+        args.paddle_engines = {}
+        args.stage_cache = output_directories("artwork-ocr-stages")[0]
         inputs["enhanced"] = {
             "device": args.device, "fonts": [{"name": font.name, "sha256": file_digest(font)} for font in args.fonts],
             "rus_traineddata": file_digest(args.tessdata / "rus.traineddata"), "battle_references": references,
@@ -518,14 +573,35 @@ def run(args) -> Path:
         }
         if args.selected_3n.is_dir():
             selection = curated_selection(args.selected_3n, groups)
-        if args.paddle_model:
-            models = {file.relative_to(args.paddle_model).as_posix(): file_digest(file)
-                      for file in sorted(args.paddle_model.rglob("*")) if file.is_file()}
-            if not models:
-                raise ValueError("A populated local PaddleOCR recognition model directory is required")
-            inputs["enhanced"]["paddle"] = {"version": version("paddleocr"), "model": models,
-                                            "device": args.paddle_device, "name": args.paddle_name}
-            args.paddle_recognizer = local_paddle(args.paddle_model, args.paddle_name, args.paddle_device)
+        ocr_module = inputs["pipeline"]["src/rebuilding/artwork_localization.py"]
+        args.ocr_inputs = {"tesseract": {}, "paddle": {}}
+        for language in ("eng", "rus"):
+            args.ocr_inputs["tesseract"][language] = [
+                ocr_module, inputs["dependencies"]["Pillow"], inputs["tesseract"],
+                file_digest(args.tessdata / f"{language}.traineddata"),
+            ]
+        args.ocr_inputs["paddle"] = {}
+        for language, path, name in (("eng", args.paddle_model, args.paddle_name),
+                                     ("rus", args.paddle_rus_model, args.paddle_rus_name)):
+            if path is None:
+                continue
+            models = {file.relative_to(path).as_posix(): file_digest(file)
+                      for file in sorted(path.rglob("*")) if file.is_file()}
+            if not {"inference.pdiparams", "inference.yml"} <= models.keys():
+                raise ValueError("A local PaddleOCR inference model directory is required")
+            args.ocr_inputs["paddle"][language] = {
+                "paddleocr": version("paddleocr"), "paddlepaddle": version("paddlepaddle") if args.paddle_device == "cpu"
+                else version("paddlepaddle-gpu"), "paddlex": version("paddlex"), "model": models,
+                "device": args.paddle_device, "name": name,
+            }
+            args.paddle_backends[language] = (path, name, args.paddle_device)
+        inputs["enhanced"]["ocr_stages"] = args.ocr_inputs
+        if args.spell_dictionary:
+            inputs["enhanced"]["spelling"] = {
+                "hunspell": file_digest(args.hunspell),
+                "aff": file_digest(args.spell_dictionary.with_suffix(".aff")),
+                "dic": file_digest(args.spell_dictionary.with_suffix(".dic")),
+            }
     cache_root, reports = output_directories("cache")
     translate = Translator(glossary, args.model, args.device)
     results = []
@@ -536,7 +612,7 @@ def run(args) -> Path:
         item = {"sha256": raw_hash, "occurrences": refs}
         results.append(item)
         protected_asset = is_protected(raw_hash, occurrences, protected)
-        if protected_asset and not args.benchmark:
+        if protected_asset and labels is None:
             item.update(status="protected", reason="Manual work or an existing translation shares this hash")
             continue
         row = occurrences[0]
@@ -560,11 +636,11 @@ def run(args) -> Path:
         if destination.resolve() != destination:
             raise ValueError(f"Cache entry was redirected by a symlink: {destination}")
         result = json.loads((destination / "result.json").read_bytes())
-        for label in ("before", "after", "draft") if "draft_sha256" in result else ("before", "after"):
-            if file_digest(destination / f"{label}.png") != result[f"{label}_sha256"]:
+        for label in ("before", "after", "draft", "edit-mask"):
+            if f"{label}_sha256" in result and file_digest(destination / f"{label}.png") != result[f"{label}_sha256"]:
                 raise ValueError(f"Cached {label} preview was modified: {destination}")
         item.update(result, preview_directory=destination.relative_to(ROOT).as_posix())
-    mode = "benchmark" if args.benchmark else "pilot" if args.pilot else "selection" if args.asset else "batch"
+    mode = "holdout" if args.holdout else "benchmark" if args.benchmark else "pilot" if args.pilot else "selection" if args.asset else "batch"
     report = {"inputs": inputs, "mode": mode,
               "counts": dict(Counter(item["status"] for item in results)), "textures": results}
     if selection is not None:
@@ -581,6 +657,7 @@ def main() -> None:
     selection.add_argument("--asset", action="append")
     selection.add_argument("--batch", action="store_true")
     selection.add_argument("--benchmark", type=Path, help="Annotated thirty-texture benchmark")
+    selection.add_argument("--holdout", type=Path, help="Independent annotated selection of eight to thirty assets")
     parser.add_argument("--enhanced", action="store_true", help="Enable enhanced review for explicit assets")
     parser.add_argument("--device", choices=("cpu", "cuda"), default="cpu")
     parser.add_argument("--match-font", type=Path, action="append", default=[])
@@ -588,6 +665,10 @@ def main() -> None:
     parser.add_argument("--selected-3n", type=Path, default=OUTPUT / "todo")
     parser.add_argument("--paddle-model", type=Path)
     parser.add_argument("--paddle-name", default="PP-OCRv5_mobile_rec")
+    parser.add_argument("--paddle-rus-model", type=Path)
+    parser.add_argument("--paddle-rus-name", default="cyrillic_PP-OCRv5_mobile_rec")
+    parser.add_argument("--spell-dictionary", type=Path, help="Russian Hunspell path without extension")
+    parser.add_argument("--hunspell", type=Path, default=shutil.which("hunspell"))
     parser.add_argument("--paddle-device", choices=("cpu", "gpu"), default="cpu")
     selection.add_argument("--ocr-new-since", type=Path, metavar="BASELINE_MANIFEST",
                            help="Inventory OCR evidence for new and corrected PNGs")
@@ -605,7 +686,12 @@ def main() -> None:
     args.tesseract = args.tesseract.resolve(strict=True)
     if args.jobs < 1:
         parser.error("--jobs must be positive")
-    args.enhanced = args.enhanced or args.benchmark is not None
+    args.enhanced = args.enhanced or args.benchmark is not None or args.holdout is not None
+    if args.spell_dictionary and args.hunspell is None:
+        parser.error("A Hunspell executable is required with --spell-dictionary")
+    if args.spell_dictionary:
+        args.spell_dictionary = args.spell_dictionary.resolve()
+        args.hunspell = args.hunspell.resolve(strict=True)
     if args.enhanced and (args.batch or args.ocr_new_since):
         parser.error("Enhanced localization requires a bounded asset selection or benchmark")
     if args.ocr_new_since:

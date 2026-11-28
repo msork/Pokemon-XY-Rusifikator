@@ -27,7 +27,14 @@
       {"source": "Results", "russian": "Результаты"},
       {"source": "Play", "russian": "Играть"},
       {"source": "Decorate", "russian": "Украсить"},
-      {"source": "Switch", "russian": "Сменить"}
+      {"source": "Switch", "russian": "Сменить"},
+      {"source": "Shift", "russian": "Смена"}
+    ],
+    "artwork_pokedex": [
+      {"source": "All", "russian": "Все"},
+      {"source": "Compare", "russian": "Сравнить"},
+      {"source": "Type 1", "russian": "Тип 1"},
+      {"source": "Type 2", "russian": "Тип 2"}
     ]
   }
 }

@@ -25,6 +25,8 @@ Milestone 3Q adds BCH texture discovery and offline OCR across the same four dat
 
 Milestone 3R adds a bounded artwork benchmark with multi-pass OCR, contextual translation, style matching, and verified previews. See the [3R benchmark and review gates](docs/research/milestone-3r-artwork.md).
 
+Milestone 3R2 verifies local PaddleOCR, measures transcription and preview quality on a benchmark and independent holdout, and records the remaining artwork blockers. See the [3R2 evaluation](docs/research/milestone-3r2-artwork.md).
+
 ## Historical milestone 3G
 
 Milestone 3F's pilot was owner-tested in Pokémon X with the female protagonist. The owner then reported two malformed bedroom lines and English battle labels/messages. Milestone 3G traced the PC and mirror lines to `a/0/8/2`, member `0055/00`, messages 1 and 3; the updated Russian candidates preserve the player-name variable, retain `проверил(а)`, and remove only the obsolete gender-selection events. The candidate also applies `ОЗ` (Очки здоровья) and `ОС` (Очки силы) to verified short labels and adds Russian menu labels and the official glossary spelling for Chespin. All new translations remain unapproved and runtime-untested. The `FIGHT` source asset is unresolved; many descriptions and other HP/PP strings remain untranslated.

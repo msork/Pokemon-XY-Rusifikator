@@ -61,6 +61,13 @@ class Translator:
                 key = glossary_key(record["source"])
                 self.terms[key].add(record["russian"])
                 self.contextual_terms[key][category].add(record["russian"])
+        self.ui_labels = defaultdict(set)
+        self.ui_context = defaultdict(lambda: defaultdict(set))
+        for category, records in categories.items():
+            for record in records:
+                key = text_key(record["source"])
+                self.ui_labels[key].add(record["russian"])
+                self.ui_context[key][category].add(record["russian"])
         metadata = json.loads((model_dir / "metadata.json").read_bytes())
         if (metadata["from_code"], metadata["to_code"]) != ("en", "ru"):
             raise ValueError("Expected a direct English-to-Russian Argos model")
@@ -75,6 +82,14 @@ class Translator:
             if match:
                 terms = match
                 break
+        if terms is None and context:
+            label = text_key(english)
+            terms = self.ui_labels.get(label)
+            for category in context:
+                match = self.ui_context.get(label, {}).get(category)
+                if match:
+                    terms = match
+                    break
         if terms:
             if len(terms) != 1 or None in terms:
                 raise ReviewRequired("The glossary requires terminology review")
@@ -90,6 +105,23 @@ class Translator:
         ) or not russian.isprintable():
             raise ReviewRequired("Translation contains unsupported text")
         return russian, method
+
+
+def check_russian_spelling(text: str, executable: Path, dictionary: Path) -> list[str]:
+    """Return dictionary misses, excluding the project's explicit UI terms."""
+    known = {"покедекс", "покемон", "покемоны", "покемонов", "покерус", "покэрус", "мега",
+             "оз", "ос", "оп", "сп", "ур"}
+    words = {word.casefold() for word in re.findall("[А-Яа-яЁё]+", text)} - known
+    if not words:
+        return []
+    output = subprocess.run(
+        [str(executable), "-d", str(dictionary.resolve()), "-i", "UTF-8", "-l"],
+        input="\n".join(sorted(words)) + "\n", text=True, encoding="utf-8", timeout=20,
+        capture_output=True, check=True,
+    )
+    if output.stderr.strip():
+        raise ValueError(f"Russian spelling dictionary error: {output.stderr.strip()}")
+    return sorted(set(output.stdout.splitlines()))
 
 
 def render(image: Image.Image, box: list[int], russian: str, font_path: Path) -> Image.Image:
@@ -262,7 +294,16 @@ def _same_region(a, b) -> bool:
 
 
 def text_key(text: str) -> str:
-    return " ".join(re.findall(r"[^\W_]+", glossary_key(text), flags=re.UNICODE))
+    label = glossary_key(text)
+    label = re.sub(r"(?:\b[a-z]\.){2,}", lambda match: match[0].replace(".", ""), label)
+    label = re.sub(r"(?<=[a-z])(?=[0-9])|(?<=[0-9])(?=[a-z])", " ", label)
+    return " ".join(re.findall(r"[^\W_]+", label, flags=re.UNICODE))
+
+
+def _vote_key(text: str) -> str:
+    key = text_key(text)
+    compact = key.replace(" ", "")
+    return compact if compact in _UI_WORDS and len(key.split()) > 1 else key
 
 
 def _ink_windows(image: Image.Image):
@@ -329,9 +370,8 @@ def _ink_windows(image: Image.Image):
             yield f"{name}-core-{minimum}/{psm}", bounds[:2], ImageOps.expand(frame, border=12, fill=255), scale, psm
 
 
-def multi_pass_ocr(image: Image.Image, executable: Path, tessdata: Path,
-                   language: str = "eng", paddle=None) -> list[dict]:
-    """Return region-level consensus, preserving proof from each contributing pass."""
+def tesseract_observations(image: Image.Image, executable: Path, tessdata: Path, language: str) -> list[dict]:
+    """Collect Tesseract readings in native RGBA coordinates."""
     candidates = []
     for kind, angle, psm in OCR_PASSES:
         if language == "rus" and (angle or psm == 11 and kind == "alpha"):
@@ -359,6 +399,100 @@ def multi_pass_ocr(image: Image.Image, executable: Path, tessdata: Path,
                        min(image.width, x - (-r // scale)), min(image.height, y - (-b // scale))]
                 if box[0] < box[2] and box[1] < box[3]:
                     candidates.append(dict(line, box=box, rotation=0, pass_name=kind))
+    # A tight native crop helps single-line status badges that Tesseract
+    # otherwise treats as border noise or fragments.
+    if language == "eng":
+        for box, angle in _compact_windows(image):
+            crop = image.crop(box)
+            if angle:
+                crop = crop.transpose(_ROTATIONS[angle])
+            for kind in ("light-contrast", "dark-contrast"):
+                frame, scale = _ocr_canvas(crop, kind, 0)
+                for line in _read_lines(frame, executable, tessdata, language, 7):
+                    if line["confidence"] < 25 or not text_key(line["text"]):
+                        continue
+                    l, t, r, b = (value - 12 for value in line["box"])
+                    local = [max(0, l // scale), max(0, t // scale),
+                             min(crop.width, -(-r // scale)), min(crop.height, -(-b // scale))]
+                    if _area(local) <= 0 or local[0] >= local[2] or local[1] >= local[3]:
+                        continue
+                    native = _unrotate_box(local, box[2] - box[0], box[3] - box[1], angle)
+                    native = [n + box[i % 2] for i, n in enumerate(native)]
+                    candidates.append(dict(line, box=native, rotation=angle, pass_name=f"compact-{kind}/7"))
+    return candidates
+
+
+def _compact_windows(image: Image.Image):
+    w, h = image.size
+    if w * h > 32_000:
+        return
+    alpha = image.getchannel("A").point(lambda value: 255 if value >= 85 else 0)
+    bounds = alpha.getbbox()
+    if bounds is None:
+        return
+    l, t, r, b = bounds
+    if r - l >= 1.7 * (b - t) and 5 <= b - t <= 65:
+        yield bounds, 0
+        if b - t <= 18 and r - l >= 72:
+            # UI strips often carry a short label beside a long horizontal bar.
+            yield (l, t, min(r, l + 42), b), 0
+    if b - t >= 1.7 * (r - l) and 5 <= r - l <= 65:
+        yield bounds, 90
+        yield bounds, 270
+
+
+def paddle_observations(image: Image.Image, candidates: list[dict], paddle) -> list[dict]:
+    """Read independent compact/ink windows as well as Tesseract regions."""
+    windows = []
+    for line in sorted(candidates, key=lambda row: -row["confidence"]):
+        box, angle = line["box"], line["rotation"]
+        if not any(angle == old_angle and _same_region(box, old_box) for old_box, old_angle, _ in windows):
+            windows.append((box, angle, None))
+        if len(windows) == 12:
+            break
+    for box, angle in _compact_windows(image):
+        if (box, angle, None) not in windows:
+            windows.append((box, angle, None))
+    w, h = image.size
+    if 18 <= w <= 100 and 6 <= h <= 18:
+        for inset in (1, 3, 5):
+            windows.append(((inset, 1, w - inset, h - 1), 0, None))
+    elif 35 <= w <= 128 and 24 <= h <= 80:
+        # A short caption often sits below a central emblem.
+        windows.append(((w * 12 // 100, h * 54 // 100, w * 88 // 100, h * 95 // 100), 0, None))
+
+    # Region widths exclude the zero padding introduced by preprocessing.
+    # Keep color-binary rasters as alternate recognizer inputs.
+    ink_boxes = []
+    for _, (x, y), frame, scale, psm in _ink_windows(image):
+        if psm != 7:
+            continue
+        width, height = (frame.width - 24) // scale, (frame.height - 24) // scale
+        box = (x, y, x + width, y + height)
+        if width < height * 1.35 or min(width, height) < 4:
+            continue
+        if any(_same_region(box, earlier) for earlier in ink_boxes):
+            continue
+        ink_boxes.append(box)
+        windows.append((box, 0, frame.convert("RGBA")))
+        if len(ink_boxes) == 6:
+            break
+    results = []
+    for box, angle, isolated in windows:
+        crop = image.crop(box)
+        if angle:
+            crop = crop.transpose(_ROTATIONS[angle])
+        answer = paddle(isolated if isolated is not None else crop)
+        if answer is None:
+            continue
+        text, confidence = answer
+        if confidence >= 50 and text_key(text):
+            results.append(dict(text=text, confidence=confidence, box=list(box), rotation=angle, pass_name="paddle"))
+    return results
+
+
+def merge_ocr_observations(candidates: list[dict]) -> list[dict]:
+    """Return spatial consensus. Multiple Paddle crops count as one pass."""
     groups: list[list[dict]] = []
     for line in sorted(candidates, key=lambda row: (-row["confidence"], row["box"], row["text"])):
         def equivalent(group):
@@ -366,7 +500,7 @@ def multi_pass_ocr(image: Image.Image, executable: Path, tessdata: Path,
             if _same_region(previous["box"], line["box"]):
                 return True
             return (previous["rotation"] == line["rotation"]
-                    and text_key(previous["text"]) == text_key(line["text"])
+                    and _vote_key(previous["text"]) == _vote_key(line["text"])
                     and _intersection(previous["box"], line["box"]) >= 0.6 * min(_area(previous["box"]), _area(line["box"])))
 
         matched = next((group for group in groups if equivalent(group)), None)
@@ -378,26 +512,37 @@ def multi_pass_ocr(image: Image.Image, executable: Path, tessdata: Path,
     for group in groups:
         votes = defaultdict(list)
         for observation in group:
-            votes[(text_key(observation["text"]), observation["rotation"])].append(observation)
-        if paddle is not None and language == "eng":
-            # Paddle is an optional local recognizer for regions proposed by
-            # Tesseract. It never approves a region on its own.
-            box = group[0]["box"]
-            crop = image.crop(box)
-            if group[0]["rotation"]:
-                crop = crop.transpose(_ROTATIONS[group[0]["rotation"]])
-            proposal = paddle(crop)
-            if proposal is not None:
-                value, score = proposal
-                votes[text_key(value), group[0]["rotation"]].append(
-                    dict(text=value, confidence=score, box=box, rotation=group[0]["rotation"], pass_name="paddle"))
-        ranked = sorted(votes.values(), key=lambda batch: (
-            -sum(max(0, row["confidence"] - 50) for row in batch), -max(row["confidence"] for row in batch)))
-        winner = max(ranked[0], key=lambda row: row["confidence"])
-        passes = sorted({row["pass_name"] for row in ranked[0] if row["confidence"] >= 65})
-        opposition = max((max((row["confidence"] for row in batch), default=0) for batch in ranked[1:]), default=0)
-        results.append(dict(winner, passes=passes, competing_confidence=opposition))
+            votes[(_vote_key(observation["text"]), observation["rotation"])].append(observation)
+        def support(batch):
+            best = {}
+            for row in batch:
+                name = row["pass_name"]
+                best[name] = max(best.get(name, 0), row["confidence"])
+            distinct = sorted(best.values(), reverse=True)
+            return (sum(max(0, conf - 50) for conf in distinct[:4]), distinct[0])
+
+        ranked = sorted(votes.values(), key=support, reverse=True)
+        hypotheses = []
+        for batch in ranked[:3]:
+            winner = max(batch, key=lambda row: row["confidence"])
+            # Prefer a token-local Tesseract box to Paddle's crop boundary.
+            positioned = [row for row in batch if row["pass_name"] != "paddle" and row["confidence"] >= 55]
+            if positioned:
+                winner = dict(winner, box=max(positioned, key=lambda row: row["confidence"])["box"])
+            passes = sorted({row["pass_name"] for row in batch if row["confidence"] >= 65})
+            opposition = max((max(row["confidence"] for row in other) for other in ranked if other is not batch),
+                             default=0)
+            hypotheses.append(dict(winner, passes=passes, competing_confidence=opposition))
+        results.append(dict(hypotheses[0], alternatives=hypotheses[1:]))
     return sorted(results, key=lambda line: (line["box"][1], line["box"][0], -line["confidence"]))
+
+
+def multi_pass_ocr(image: Image.Image, executable: Path, tessdata: Path,
+                   language: str = "eng", paddle=None) -> list[dict]:
+    candidates = tesseract_observations(image, executable, tessdata, language)
+    if paddle is not None:
+        candidates.extend(paddle_observations(image, candidates, paddle))
+    return merge_ocr_observations(candidates)
 
 
 def local_paddle(model: Path, name: str, device: str):
@@ -419,9 +564,29 @@ _UI_WORDS = frozenset("""
     all appearance asleep bag battle burned button champion cleared color compare congratulations
     cry dark decorate dragon draw electric exp fairy fainted fight fighting fire flying frozen ghost
     grass ground habitat high hp ice internet kalos league lose mega mountain national new normal
+    speed attack defense special sp def atk ko
     paralysis play poison poisoned pokedex pokemon pokerus psychic push results rock run score
     shape shift start steel switch type victory water win evolution coastal
 """.split())
+
+
+def _overlapping_line(a: dict, b: dict) -> bool:
+    if a["rotation"] != b["rotation"]:
+        return _same_region(a["box"], b["box"])
+    box_a, box_b = a["box"], b["box"]
+    overlap = _intersection(box_a, box_b)
+    if overlap >= 0.65 * min(_area(box_a), _area(box_b)):
+        return True
+    x0, y0, x1, y1 = box_a
+    l, t, r, bottom = box_b
+    # Eliminate fragments on the same baseline when a larger OCR crop
+    # contains the shorter phrase. Keep genuinely stacked lines separate.
+    if a["rotation"] in (90, 270):
+        x0, y0, x1, y1 = y0, x0, y1, x1
+        l, t, r, bottom = t, l, bottom, r
+    shared_words = set(_vote_key(a["text"]).split()) & set(_vote_key(b["text"]).split())
+    return bool(shared_words and min(y1, bottom) - max(y0, t) >= 0.5 * min(y1 - y0, bottom - t)
+                and min(x1, r) - max(x0, l) >= 0.45 * min(x1 - x0, r - l))
 
 
 def classify_english(lines: list[dict], filename: str, vocabulary: set[str]) -> tuple[str, list[dict]]:
@@ -432,7 +597,15 @@ def classify_english(lines: list[dict], filename: str, vocabulary: set[str]) -> 
     if any(line["confidence"] >= 75 and foreign.intersection(text_key(line["text"]).split()) for line in lines):
         return "other_language_or_locale", []
     usable = []
-    for line in sorted(lines, key=lambda row: (-row["confidence"], row["box"])):
+    candidates = [candidate for line in lines for candidate in (line, *line.get("alternatives", ()))]
+    lexicon = _UI_WORDS | vocabulary
+
+    def rank(row):
+        words = _vote_key(row["text"]).split()
+        supported = sum(word in lexicon or word.isdigit() for word in words) / max(1, len(words))
+        return -min(2, len(row["passes"])), -supported, -len(words), -row["confidence"], row["box"]
+
+    for line in sorted(candidates, key=rank):
         tokens = text_key(line["text"]).split()
         words = set(tokens)
         collapsed = "".join(tokens)
@@ -445,7 +618,7 @@ def classify_english(lines: list[dict], filename: str, vocabulary: set[str]) -> 
             continue
         if line["confidence"] < 60 or not (words & (_UI_WORDS | vocabulary)):
             continue
-        if any(_intersection(line["box"], kept["box"]) >= 0.6 * _area(line["box"]) for kept in usable):
+        if any(_overlapping_line(line, kept) for kept in usable):
             continue
         usable.append(line)
     usable.sort(key=lambda row: (row["box"][1], row["box"][0]))
