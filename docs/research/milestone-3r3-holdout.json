@@ -1,0 +1,127 @@
+[
+  {
+    "sha256": "0c34b3ec3e6369d1659660bf386aeaaf0366742d6207af5d1605c1414092d989",
+    "id": "T005017",
+    "english": "CAPS",
+    "russian": [
+      "Прописные",
+      "Верхний регистр",
+      "Заглавные"
+    ],
+    "group": "keyboard caps"
+  },
+  {
+    "sha256": "ac8e7251520db3b0c55cb0e74e315d55daed94dc3a07f4802dd7084999d03c48",
+    "id": "T005018",
+    "english": "lower",
+    "russian": [
+      "строчные",
+      "нижний регистр"
+    ],
+    "group": "keyboard lowercase"
+  },
+  {
+    "sha256": "2398352127a03c386b4e72af0a7ce288208f85bf3e53f7b3cb535e4598bd0e9d",
+    "id": "T004710",
+    "english": "SP. ATK",
+    "russian": [
+      "Сп. атака",
+      "Спецатака",
+      "Специальная атака",
+      "Сп. атк."
+    ],
+    "group": "outlined stat"
+  },
+  {
+    "sha256": "f4ce3ed653e3098c7986eb8b5cd7a430e67d59ff76b2d4bcde70e02486f34d07",
+    "id": "T004697",
+    "english": "HP",
+    "russian": [
+      "ОЗ"
+    ],
+    "group": "tiny green stat"
+  },
+  {
+    "sha256": "ec85fbaff7a71c4cda4cffc1fe0855eca3651f8c8178dcad2413481db0372b0c",
+    "id": "T005038",
+    "english": "Hall of Fame",
+    "russian": [
+      "Зал славы"
+    ],
+    "group": "end-card serif"
+  },
+  {
+    "sha256": "0624dee34d6c5050007d68bede5dba5a53169cf13c17da4fe1ed9c73e8bec62c",
+    "id": "T005039",
+    "english": "Congratulations!",
+    "russian": [
+      "Поздравляем!"
+    ],
+    "group": "end-card condensed serif"
+  },
+  {
+    "sha256": "b15e0fcf5c7c36d1c1c763781ec63b161bfbd7b5f0a36a38285ee2fa9aafb851",
+    "id": "T004300",
+    "english": null,
+    "russian": [],
+    "group": "German locale code"
+  },
+  {
+    "sha256": "d0720586ef4722cad5c7606fa888116a960f250ee29914b6d36017372050643a",
+    "id": "T005022",
+    "english": null,
+    "russian": [],
+    "group": "French keyboard mode"
+  },
+  {
+    "sha256": "5a80dab1db38d0102520cef3dbdebd503be2f8adaabd73cf65db05ebd6138bdd",
+    "id": "T004872",
+    "english": "COASTAL KALOS POKÉDEX",
+    "russian": [
+      "Прибрежный покедекс Калоса",
+      "Покедекс прибрежного Калоса"
+    ],
+    "group": "blue outlined title"
+  },
+  {
+    "sha256": "aec763e06323e8f177792522af97fb4b8c3518724c1892f8ebc1358c6c3c1b6b",
+    "id": "T004873",
+    "english": "MOUNTAIN KALOS POKÉDEX",
+    "russian": [
+      "Горный покедекс Калоса",
+      "Покедекс горного Калоса"
+    ],
+    "group": "orange outlined title"
+  },
+  {
+    "sha256": "593e6721a58572bb6679210696c15800bc542a1bfd76bd581aa3d0f3bb68281c",
+    "id": "T004704",
+    "english": "CLEARED",
+    "russian": [
+      "Пройдено",
+      "Завершено",
+      "Выполнено"
+    ],
+    "group": "ruled red lettering"
+  },
+  {
+    "sha256": "4c3a3f3e793419d11a626ce10bce5e838b5fb5afd78d87135a291243299d0726",
+    "id": "T004860",
+    "english": "TYPE 2",
+    "russian": [
+      "Тип 2"
+    ],
+    "group": "textured green badge"
+  },
+  {
+    "sha256": "af4853cc3d8d77d80f6e211549610037ed96f438ab8a13e5e70277e1d24db3f6",
+    "id": "T004649",
+    "english": "NEW",
+    "russian": [
+      "Новое",
+      "Новый",
+      "Новинка"
+    ],
+    "group": "outlined trial badge"
+  }
+]

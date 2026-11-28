@@ -5,10 +5,13 @@ from __future__ import annotations
 import argparse
 from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor
-from functools import lru_cache
+from contextlib import ExitStack
+from difflib import SequenceMatcher
+from functools import lru_cache, partial
 from importlib.metadata import version
 from io import BytesIO
 import json
+import os
 from pathlib import Path
 import re
 import shutil
@@ -27,12 +30,18 @@ from src.rebuilding.artwork_localization import (
     merge_ocr_observations, ocr, paddle_observations, render, tesseract_observations, text_key,
 )
 from src.rebuilding.artwork_rendering import reference_style, render_enhanced
+from src.rebuilding.artwork_models import LocalArtworkModel, PROMPT_VERSION
 from src.rebuilding.bclim import ETC_FORMATS, recompress_bclim_etc
 from src.rebuilding.textures import decode_bclim, encode_bclim
 
 OUTPUT_ROOT = ROOT / "build/offline-textures"
 BATTLE_REFERENCES = ROOT / "build/milestone-3i/editing"
 ARTWORK_GLOSSARY = ROOT / "glossary/artwork-terms.json"
+FROZEN_EVALUATIONS = (
+    ("milestone-3r-benchmark.json", "1d8207c98ad17b922d1a6233bd5e4486693d61bc1b9102d7412a894c305cab52"),
+    ("milestone-3r2-holdout.json", "bafdc256d548a99f86ec3ac04922e68f8b03f1a4b873d4f48e233fec7b85ca98"),
+    ("milestone-3r3-holdout.json", "66e70f0fbcefa70cda2db61fdb09d0225934875fdbda7d37a41578dcbe63a25b"),
+)
 # Source fingerprints keep the 3O pilot stable when discovery assigns new IDs.
 PILOT_HASHES = (
     "5ef407c541df09ff47a4502ab65173348c4bbf58dd90cc087c55d43de46f920c",  # T000264
@@ -241,6 +250,73 @@ def enhanced_read(image: Image.Image, args, language: str) -> list[dict]:
     return merge_ocr_observations(tess + independent)
 
 
+def compare_vision(reading: str, evidence: list[dict], lines: list[dict], classification: str) -> dict:
+    """Record independent text support without using model coordinates for an edit."""
+    key = text_key(reading)
+    if not key:
+        return {"text": reading, "agreement": "abstained"}
+    if classification == "other_language_or_locale":
+        return {"text": reading, "agreement": "locale_excluded"}
+    if key == text_key(" ".join(line["text"] for line in lines)):
+        return {"text": reading, "agreement": "classical_lines"}
+    candidates = [candidate for line in evidence for candidate in (line, *line.get("alternatives", ()))
+                  if candidate["confidence"] >= 60]
+    matching = [candidate for candidate in candidates if text_key(candidate["text"]) == key]
+    if matching:
+        return {"text": reading, "agreement": "classical_alternative"}
+    similarity = max((SequenceMatcher(None, text_key(candidate["text"]), key, autojunk=False).ratio()
+                      for candidate in candidates), default=0)
+    return {"text": reading, "agreement": "partial_classical_support" if similarity >= 0.65 else "unconfirmed"}
+
+
+class ArtworkModelStages:
+    """Cache local model calls and keep at most one model resident."""
+    def __init__(self, args, cache: Path, inputs: dict):
+        self.cache = cache
+        self.backends = {}
+        self.session = ExitStack()
+        self.active = None
+        if not (args.vision_weights or args.translation_weights):
+            return
+        runtime = args.llama_server.resolve(strict=True)
+        inputs["runner"] = {
+            "binary": file_digest(runtime), "device": args.ai_device,
+            "libraries": {path.name: file_digest(path) for path in sorted(runtime.parent.glob("lib*.so*"))
+                          if path.is_file() and not path.is_symlink()},
+            "version": PROMPT_VERSION, "wrapper": file_digest(ROOT / "src/rebuilding/artwork_models.py"),
+        }
+        for name, weights, projector in (("vision", args.vision_weights, args.vision_projector),
+                                         ("translation", args.translation_weights, None)):
+            if weights is None:
+                continue
+            fingerprint = dict(inputs["runner"], weights=file_digest(weights))
+            if projector:
+                fingerprint["projector"] = file_digest(projector)
+            inputs[name] = fingerprint
+            self.backends[name] = (fingerprint, LocalArtworkModel(args.llama_server, weights, args.ai_device, projector))
+
+    def run(self, kind, key, inference):
+        fingerprint, backend = self.backends[kind]
+
+        def compute():
+            if self.active != kind:
+                self.session.close()
+                self.active = None
+                self.session.enter_context(backend.session(self.cache / f"{kind}-{os.getpid()}.log"))
+                self.active = kind
+            return inference(backend)
+
+        return cached_ocr_stage(self.cache, [kind, fingerprint, key], compute)
+
+    def read(self, image: Image.Image) -> str:
+        key = digest(json_bytes(image.size) + image.tobytes())
+        return self.run("vision", key, lambda model: model.read(image))
+
+    def translate(self, english: str, context: tuple[str, ...], required: dict[str, str]) -> str:
+        return self.run("translation", [english, context, required],
+                        lambda model: model.translate(english, context, required))
+
+
 def process_enhanced(row: dict, args, translate: Translator, directory: Path, *, protected: bool = False) -> dict:
     with Image.open(scanner_png(row)) as png:
         original = png.convert("RGBA")
@@ -256,10 +332,17 @@ def process_enhanced(row: dict, args, translate: Translator, directory: Path, *,
         if protected:
             result["status"] = "protected"
             raise ReviewRequired("Read-only benchmark control with existing manual artwork")
+        if "vision" in args.ai_stages.backends and classification != "other_language_or_locale":
+            result["vision"] = compare_vision(args.ai_stages.read(original), evidence, lines, classification)
+            if result["vision"]["agreement"] == "classical_alternative":
+                classification = result["classification"] = "english_review"
         if not lines:
             raise ReviewRequired("English lettering was not confirmed")
         context = texture_context(row)
-        result["lines"] = lines = translated_lines(lines, translate, context)
+        draft = args.ai_stages.translate if "translation" in args.ai_stages.backends else None
+        result["lines"] = lines = translated_lines(
+            lines, partial(translate, enforced=args.enforced_terms, draft=draft), context,
+        )
         if args.spell_dictionary:
             misses = check_russian_spelling(" ".join(line["russian"] for line in lines),
                                             args.hunspell, args.spell_dictionary)
@@ -355,6 +438,12 @@ def benchmark_scores(textures: list[dict], labels: dict) -> dict:
         scores["true_positive" if expected and detected else "false_negative" if expected else
                "false_positive" if detected else "true_negative"] += 1
         scores["exact_english_transcriptions"] += text_match
+        vision = texture.get("vision", {})
+        vision_exact = bool(expected and text_key(vision.get("text", "")) == text_key(expected))
+        scores["vision_readings"] += bool(vision.get("text"))
+        scores["vision_exact"] += vision_exact
+        scores["vision_exact_classical_misses"] += vision_exact and not text_match
+        scores["vision_control_readings"] += bool(vision.get("text")) and not expected
         scores["incorrect_confirmed_transcriptions"] += bool(expected and detected and not text_match)
         scores["protected_controls"] += texture["status"] == "protected"
         scores["translations_attempted"] += bool(translated)
@@ -364,7 +453,7 @@ def benchmark_scores(textures: list[dict], labels: dict) -> dict:
         scores["incorrect_automatic_previews"] += texture["status"] == "automatic_preview" and not translation_match
         rows.append({"sha256": texture["sha256"], "label": label, "english_detected": detected,
                      "actual_english": actual, "actual_russian": translated, "text_match": text_match,
-                     "translation_match": translation_match})
+                     "translation_match": translation_match, "vision": vision})
     visual = [profile for texture in textures for profile in texture.get("visual", [])]
     averages = {key: round(sum(profile[key] for profile in visual) / len(visual), 3)
                 for key in ("visual_score", "palette_coverage", "width_fit", "slant_match", "soft_alpha_drift")} if visual else {}
@@ -518,15 +607,21 @@ def run(args) -> Path:
         groups[raw_hash].append(row)
     labels = None
     if args.benchmark or args.holdout:
-        entries = json.loads((args.benchmark or args.holdout).read_bytes())
+        annotation = (args.benchmark or args.holdout).read_bytes()
+        annotation_hash = digest(annotation)
+        entries = json.loads(annotation)
         labels = {row["sha256"]: row for row in entries}
         size_ok = 8 <= len(entries) <= 30 if args.holdout else len(entries) == 30
         if not size_ok or len(labels) != len(entries) or not labels.keys() <= groups.keys():
             raise ValueError("Evaluation requires unique bounded labels in the selected manifest")
-        if args.holdout:
-            benchmark = json.loads((ROOT / "docs/research/milestone-3r-benchmark.json").read_bytes())
-            if labels.keys() & {row["sha256"] for row in benchmark}:
-                raise ValueError("Holdout overlaps the thirty-texture benchmark")
+        for name, pinned in FROZEN_EVALUATIONS:
+            frozen = (ROOT / "docs/research" / name).read_bytes()
+            if digest(frozen) != pinned:
+                raise ValueError(f"Frozen evaluation changed: {name}")
+            if args.holdout and annotation_hash != pinned and labels.keys() & {
+                row["sha256"] for row in json.loads(frozen)
+            }:
+                raise ValueError(f"Holdout overlaps {name}")
         hashes = sorted(labels)
     elif args.pilot:
         if any(raw_hash not in groups for raw_hash in PILOT_HASHES):
@@ -542,6 +637,11 @@ def run(args) -> Path:
     if args.enhanced:
         catalog = json.loads(glossary)
         catalog["categories"].update(json.loads(ARTWORK_GLOSSARY.read_bytes())["categories"])
+        args.enforced_terms = {
+            term["source"].lower(): term["russian"]
+            for entries in catalog["categories"].values() for term in entries
+            if term.get("enforce") and term["source"] in {"HP", "PP"}
+        }
         glossary = json_bytes(catalog)
     model_files = [args.model / "metadata.json", args.model / "sentencepiece.model",
                    *(path for path in sorted((args.model / "model").rglob("*")) if path.is_file())]
@@ -603,43 +703,46 @@ def run(args) -> Path:
                 "dic": file_digest(args.spell_dictionary.with_suffix(".dic")),
             }
     cache_root, reports = output_directories("cache")
+    if args.enhanced:
+        args.ai_stages = ArtworkModelStages(args, args.stage_cache, inputs["enhanced"].setdefault("ai", {}))
     translate = Translator(glossary, args.model, args.device)
     results = []
-    for raw_hash in hashes:
-        occurrences = groups[raw_hash]
-        refs = [{key: row[key] for key in ("game", "version", "archive_path", "nested_member",
-                                           "internal_filename", "asset_id")} for row in occurrences]
-        item = {"sha256": raw_hash, "occurrences": refs}
-        results.append(item)
-        protected_asset = is_protected(raw_hash, occurrences, protected)
-        if protected_asset and labels is None:
-            item.update(status="protected", reason="Manual work or an existing translation shares this hash")
-            continue
-        row = occurrences[0]
-        real_png = scanner_png(row)
-        key = digest(json_bytes([raw_hash, file_digest(real_png), inputs, protected_asset,
-                                 row["internal_filename"], row.get("source_kind")]))
-        destination = cache_root / key
-        if not destination.exists():
-            with tempfile.TemporaryDirectory(prefix=".pending-", dir=cache_root) as staging:
-                stage = Path(staging) / "entry"
-                stage.mkdir()
-                if args.enhanced:
-                    process_enhanced(row, args, translate, stage, protected=protected_asset)
-                else:
-                    process(row, args, translate, stage)
-                try:
-                    stage.rename(destination)
-                except OSError:
-                    if not destination.is_dir():
-                        raise
-        if destination.resolve() != destination:
-            raise ValueError(f"Cache entry was redirected by a symlink: {destination}")
-        result = json.loads((destination / "result.json").read_bytes())
-        for label in ("before", "after", "draft", "edit-mask"):
-            if f"{label}_sha256" in result and file_digest(destination / f"{label}.png") != result[f"{label}_sha256"]:
-                raise ValueError(f"Cached {label} preview was modified: {destination}")
-        item.update(result, preview_directory=destination.relative_to(ROOT).as_posix())
+    with args.ai_stages.session if args.enhanced else ExitStack():
+        for raw_hash in hashes:
+            occurrences = groups[raw_hash]
+            refs = [{key: row[key] for key in ("game", "version", "archive_path", "nested_member",
+                                               "internal_filename", "asset_id")} for row in occurrences]
+            item = {"sha256": raw_hash, "occurrences": refs}
+            results.append(item)
+            protected_asset = is_protected(raw_hash, occurrences, protected)
+            if protected_asset and labels is None:
+                item.update(status="protected", reason="Manual work or an existing translation shares this hash")
+                continue
+            row = occurrences[0]
+            real_png = scanner_png(row)
+            key = digest(json_bytes([raw_hash, file_digest(real_png), inputs, protected_asset,
+                                     row["internal_filename"], row.get("source_kind")]))
+            destination = cache_root / key
+            if not destination.exists():
+                with tempfile.TemporaryDirectory(prefix=".pending-", dir=cache_root) as staging:
+                    stage = Path(staging) / "entry"
+                    stage.mkdir()
+                    if args.enhanced:
+                        process_enhanced(row, args, translate, stage, protected=protected_asset)
+                    else:
+                        process(row, args, translate, stage)
+                    try:
+                        stage.rename(destination)
+                    except OSError:
+                        if not destination.is_dir():
+                            raise
+            if destination.resolve() != destination:
+                raise ValueError(f"Cache entry was redirected by a symlink: {destination}")
+            result = json.loads((destination / "result.json").read_bytes())
+            for label in ("before", "after", "draft", "edit-mask"):
+                if f"{label}_sha256" in result and file_digest(destination / f"{label}.png") != result[f"{label}_sha256"]:
+                    raise ValueError(f"Cached {label} preview was modified: {destination}")
+            item.update(result, preview_directory=destination.relative_to(ROOT).as_posix())
     mode = "holdout" if args.holdout else "benchmark" if args.benchmark else "pilot" if args.pilot else "selection" if args.asset else "batch"
     report = {"inputs": inputs, "mode": mode,
               "counts": dict(Counter(item["status"] for item in results)), "textures": results}
@@ -670,6 +773,11 @@ def main() -> None:
     parser.add_argument("--spell-dictionary", type=Path, help="Russian Hunspell path without extension")
     parser.add_argument("--hunspell", type=Path, default=shutil.which("hunspell"))
     parser.add_argument("--paddle-device", choices=("cpu", "gpu"), default="cpu")
+    parser.add_argument("--llama-server", type=Path, help="Local llama.cpp server executable")
+    parser.add_argument("--vision-weights", type=Path, help="Local vision GGUF")
+    parser.add_argument("--vision-projector", type=Path, help="Local vision projector GGUF")
+    parser.add_argument("--translation-weights", type=Path, help="Local Russian translation draft GGUF")
+    parser.add_argument("--ai-device", default="none", help="Local llama.cpp device name (none for CPU)")
     selection.add_argument("--ocr-new-since", type=Path, metavar="BASELINE_MANIFEST",
                            help="Inventory OCR evidence for new and corrected PNGs")
     parser.add_argument("--jobs", type=int, default=1, help="Number of concurrent OCR inventory workers")
@@ -694,6 +802,10 @@ def main() -> None:
         args.hunspell = args.hunspell.resolve(strict=True)
     if args.enhanced and (args.batch or args.ocr_new_since):
         parser.error("Enhanced localization requires a bounded asset selection or benchmark")
+    if bool(args.vision_weights) != bool(args.vision_projector):
+        parser.error("Vision weights and their matching projector are required together")
+    if (args.vision_weights or args.translation_weights) and not (args.enhanced and args.llama_server):
+        parser.error("Local models require enhanced mode and --llama-server")
     if args.ocr_new_since:
         print(ocr_inventory(args))
     else:

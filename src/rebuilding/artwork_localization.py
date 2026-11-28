@@ -48,6 +48,34 @@ def glossary_key(text: str) -> str:
                    if not unicodedata.combining(character))
 
 
+def required_artwork_terms(source: str, enforced: dict[str, str]) -> dict[str, str]:
+    tokens = set(re.findall(r"[a-z]+", glossary_key(source)))
+    return {word.upper(): enforced[word] for word in sorted(tokens & enforced.keys())}
+
+
+def translate_stat_label(source: str, required: dict[str, str]) -> str | None:
+    """Translate bare stat abbreviations while preserving their separators and values."""
+    if not required or not re.fullmatch(r"[a-zA-Z0-9\s./%:+−–-]+", source):
+        return None
+    tokens = re.findall(r"[a-zA-Z]+", source)
+    if any(token.upper() not in required for token in tokens):
+        return None
+    return re.sub(r"[a-zA-Z]+", lambda match: required[match[0].upper()], source)
+
+
+def validate_artwork_translation(source: str, russian: str, required: dict[str, str]) -> None:
+    if not re.search("[А-Яа-яЁё]", russian) or any(
+        character.isalpha() and not re.fullmatch("[А-Яа-яЁё]", character) for character in russian
+    ) or not russian.isprintable():
+        raise ReviewRequired("Translation contains unsupported text")
+    words = Counter(re.findall("[А-Яа-яЁё]+", russian.upper()))
+    source_words = Counter(re.findall(r"[a-zA-Z]+", source.upper()))
+    if any(words[target.upper()] != source_words[term] for term, target in required.items()):
+        raise ReviewRequired("Translation does not preserve the required stat abbreviations")
+    if re.findall(r"\d+", source) != re.findall(r"\d+", russian):
+        raise ReviewRequired("Translation does not preserve the original numbers")
+
+
 class Translator:
     def __init__(self, glossary: bytes, model_dir: Path, device: str = "cpu"):
         import ctranslate2
@@ -74,7 +102,9 @@ class Translator:
         self.tokenizer = sentencepiece.SentencePieceProcessor(model_file=str(model_dir / "sentencepiece.model"))
         self.model = ctranslate2.Translator(str(model_dir / "model"), device=device, intra_threads=1)
 
-    def __call__(self, english: str, context: tuple[str, ...] = ()) -> tuple[str, str]:
+    def __call__(self, english: str, context: tuple[str, ...] = (), *, draft=None,
+                 enforced: dict[str, str] | None = None) -> tuple[str, str]:
+        required = required_artwork_terms(english, enforced or {})
         key = glossary_key(english)
         terms = self.terms.get(key)
         for category in context:
@@ -90,16 +120,25 @@ class Translator:
                 if match:
                     terms = match
                     break
+        literal = translate_stat_label(english, required)
         if terms:
             if len(terms) != 1 or None in terms:
                 raise ReviewRequired("The glossary requires terminology review")
             russian, = terms
             method = "glossary"
+        elif literal:
+            russian, method = literal, "glossary"
+        elif draft:
+            russian = draft(english, context, required)
+            method = "local_llm"
         else:
             result, = self.model.translate_batch([self.tokenizer.encode(english.lower() if english.isupper() else english, out_type=str)], beam_size=4)
             russian = self.tokenizer.decode(result.hypotheses[0])
             method = "offline_model"
         russian = russian.upper() if english.isupper() else russian
+        if enforced is not None:
+            validate_artwork_translation(english, russian, required)
+            return russian, method
         if not re.search("[А-Яа-яЁё]", russian) or any(
             character.isalpha() and not re.fullmatch("[А-Яа-яЁё]", character) for character in russian
         ) or not russian.isprintable():
