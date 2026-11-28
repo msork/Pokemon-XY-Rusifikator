@@ -1,0 +1,33 @@
+{
+  "categories": {
+    "artwork_battle_results": [
+      {"source": "Draw", "russian": "Ничья"},
+      {"source": "Lose", "russian": "Поражение"},
+      {"source": "Win", "russian": "Победа"}
+    ],
+    "artwork_battle_status": [
+      {"source": "Asleep", "russian": "Сон"},
+      {"source": "Burned", "russian": "Ожог"},
+      {"source": "EXP", "russian": "Опыт"},
+      {"source": "Fainted", "russian": "Без сил"},
+      {"source": "Frozen", "russian": "Заморозка"},
+      {"source": "Paralysis", "russian": "Паралич"},
+      {"source": "Poisoned", "russian": "Отравление"}
+    ],
+    "artwork_stats": [
+      {"source": "Attack", "russian": "Атака"},
+      {"source": "Defense", "russian": "Защита"},
+      {"source": "Speed", "russian": "Скорость"}
+    ],
+    "artwork_menu": [
+      {"source": "Press Start", "russian": "Нажмите пуск"},
+      {"source": "High Score", "russian": "Рекорд"},
+      {"source": "Cleared", "russian": "Пройдено"},
+      {"source": "Mega Evolution", "russian": "Мега эволюция"},
+      {"source": "Results", "russian": "Результаты"},
+      {"source": "Play", "russian": "Играть"},
+      {"source": "Decorate", "russian": "Украсить"},
+      {"source": "Switch", "russian": "Сменить"}
+    ]
+  }
+}

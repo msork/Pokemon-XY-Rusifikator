@@ -323,3 +323,67 @@ def encode_bclim(rgba: bytes, width: int, height: int, template: bytes) -> bytes
     if fmt != 8 and decode_bclim(rebuilt)[3] != rgba:
         raise ValueError(f"BCLIM format {fmt} cannot represent the edited RGBA samples exactly")
     return rebuilt
+
+
+def recompress_bclim_etc(rgba: bytes, template: bytes, edit_mask: bytes) -> tuple[bytes, dict]:
+    """Recompress changed blocks while retaining exact alpha and protected samples."""
+    from src.rebuilding.etc1_encoding import compress_rgb_block, selector_only
+
+    layout = bclim_layout(template)
+    width, height = layout.width, layout.height
+    if layout.format not in ETC_FORMATS or len(rgba) != width * height * 4 or len(edit_mask) != width * height:
+        raise ValueError("ETC1 recompression requires matching source dimensions and edit mask")
+    old = _decode(template, layout)
+    for i, allowed in enumerate(edit_mask):
+        if not allowed and rgba[4 * i:4 * i + 4] != old[4 * i:4 * i + 4]:
+            raise ValueError("ETC1 requested edit touches protected texels")
+
+    pixels = bytearray(template)
+    has_alpha = layout.format == 11
+    for offset, x, y in _etc_pixels(layout):
+        rgb_offset = offset + 8 if has_alpha else offset
+        word = int.from_bytes(template[rgb_offset:rgb_offset + 8], "little")
+        colors = _etc_colors(word)
+        samples = []
+        rgb_changed = False
+        for i in range(16):
+            dx, dy = divmod(i, 4)
+            if x + dx >= width or y + dy >= height:
+                selector = (word >> i & 1) | (word >> (i + 15) & 2)
+                color = colors[(dy if word & (1 << 32) else dx) // 2][selector]
+                samples.append((tuple(color), True))
+                continue
+            idx = (y + dy) * width + x + dx
+            pos = idx * 4
+            rgb, alpha = rgba[pos:pos + 3], rgba[pos + 3]
+            samples.append((tuple(rgb), not edit_mask[idx] or rgb == old[pos:pos + 3]))
+            rgb_changed |= rgb != old[pos:pos + 3]
+            if alpha != old[pos + 3]:
+                if not has_alpha or alpha % 17:
+                    raise ValueError("ETC1A4 requires exact four-bit alpha and ETC1 is opaque")
+                _write_nibble(pixels, offset * 2 + i, alpha // 17)
+        if rgb_changed:
+            exact = selector_only(word, tuple(samples))
+            if exact is None:
+                exact = compress_rgb_block(tuple(samples))
+            pixels[rgb_offset:rgb_offset + 8] = exact.to_bytes(8, "little")
+
+    rebuilt = bytes(pixels)
+    decoded = _decode(rebuilt, layout)
+    changed = 0
+    maximum = squared = 0
+    for i, allowed in enumerate(edit_mask):
+        pos = i * 4
+        if decoded[pos + 3] != rgba[pos + 3] or (not allowed and decoded[pos:pos + 4] != old[pos:pos + 4]):
+            raise ValueError("ETC1 round trip changed alpha or protected texels")
+        if rgba[pos:pos + 3] != old[pos:pos + 3]:
+            changed += 1
+            errors = [abs(a - b) for a, b in zip(decoded[pos:pos + 3], rgba[pos:pos + 3])]
+            maximum = max(maximum, *errors)
+            squared += sum(error * error for error in errors)
+        elif decoded[pos:pos + 3] != old[pos:pos + 3]:
+            raise ValueError("ETC1 round trip drifted outside the edited RGB samples")
+    rms = (squared / (3 * changed)) ** 0.5 if changed else 0.0
+    if maximum > 12 or rms > 5:
+        raise ValueError(f"ETC1 edited RGB exceeds quality limits (max {maximum}, RMS {rms:.2f})")
+    return (rebuilt if rebuilt != template else template), {"max_rgb_error": maximum, "rms_rgb_error": round(rms, 3)}

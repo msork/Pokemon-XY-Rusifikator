@@ -1,0 +1,295 @@
+[
+  {
+    "sha256": "5ef407c541df09ff47a4502ab65173348c4bbf58dd90cc087c55d43de46f920c",
+    "id": "T000264",
+    "english": "SWITCH",
+    "russian": [
+      "Сменить",
+      "Переключить"
+    ],
+    "group": "3O OCR hold"
+  },
+  {
+    "sha256": "b6910ab4e5a54c5fbb411429f622224d1fb14fc3253684bc312906f59ce9087e",
+    "id": "T002718",
+    "english": "PUSH START BUTTON",
+    "russian": [
+      "Нажмите кнопку пуск",
+      "Нажмите кнопку старт"
+    ],
+    "group": "3O control"
+  },
+  {
+    "sha256": "83a5eb0fd06b86fa2e10068940eafc2614c7fb3d39355f206cd2187299226ca0",
+    "id": "T003077",
+    "english": "EXP",
+    "russian": [
+      "Опыт",
+      "ОП"
+    ],
+    "group": "3O OCR hold"
+  },
+  {
+    "sha256": "64f004d6c884d93b38d8023b28c33b2cf56e0b584a09a5ef3e896747c55e96ea",
+    "id": "T003101",
+    "english": "PARALYSIS",
+    "russian": [
+      "Паралич"
+    ],
+    "group": "3O OCR hold"
+  },
+  {
+    "sha256": "76bba1450dbda41153ab562ff276d087ee2e7bf07c8aae34c4eacd9449e16a94",
+    "id": "T003394",
+    "english": "DRAW",
+    "russian": [
+      "Ничья"
+    ],
+    "group": "3O artwork hold"
+  },
+  {
+    "sha256": "3fcb80a78d88f42a275b857a2edea018a21a7ca184d050a3ce3c483557b66cd1",
+    "id": "T003397",
+    "english": "WIN",
+    "russian": [
+      "Победа"
+    ],
+    "group": "3O artwork hold"
+  },
+  {
+    "sha256": "da42241162b8a7c3d4e7d91cf0062ec44ce867cca9de4386e7896fc9a1e91054",
+    "id": "T003423",
+    "english": "HIGH SCORE",
+    "russian": [
+      "Рекорд",
+      "Высший результат"
+    ],
+    "group": "3O OCR hold"
+  },
+  {
+    "sha256": "5b43e1f52f37eeebd00f095f843c7b54caf8b989975eee0ee677bc47916fee6c",
+    "id": "T003430",
+    "english": "CLEARED",
+    "russian": [
+      "Пройдено",
+      "Завершено"
+    ],
+    "group": "3O OCR hold"
+  },
+  {
+    "sha256": "f0ea91a7e9a720a09bee5eeae253b5acfbc6e7e8640c7834be38d1b6a962fb39",
+    "id": "T003475",
+    "english": "POKÉDEX",
+    "russian": [
+      "Покедекс"
+    ],
+    "group": "3O glossary hold"
+  },
+  {
+    "sha256": "41ece7f5a2c27d5d62d99e2f9027f6dab52176fb902672f95ce18ee85f4d78d7",
+    "id": "T003563",
+    "english": null,
+    "russian": [],
+    "group": "3O ambiguous FIN negative"
+  },
+  {
+    "sha256": "e6b591f71e76e4f72252379512466cd97273ad991d85bd775d81dad06aae9ad6",
+    "id": "T000230",
+    "english": "Internet",
+    "russian": [
+      "Интернет"
+    ],
+    "group": "glow"
+  },
+  {
+    "sha256": "2f622de8dd4d0f85f97f5dd0f17d4e4c2740e6e84f2ccdc762d2a42b84e2d186",
+    "id": "T000262",
+    "english": "PLAY",
+    "russian": [
+      "Играть",
+      "Игра"
+    ],
+    "group": "illustrated button"
+  },
+  {
+    "sha256": "25034b5c020c480d466b3614f58fd059607d96eadd4462338bed0af78f632192",
+    "id": "T000263",
+    "english": "DECORATE",
+    "russian": [
+      "Украсить",
+      "Украшать",
+      "Украшение"
+    ],
+    "group": "illustrated button"
+  },
+  {
+    "sha256": "61e0cf52a0bea80e6adfe1ad44bce6bd53c7096cc169b3c8513ea351c589a32f",
+    "id": "T003099",
+    "english": "FAINTED",
+    "russian": [
+      "Без сил",
+      "Потерял сознание"
+    ],
+    "group": "small battle status"
+  },
+  {
+    "sha256": "bd8fb942ba8c7dfdd4ad9e2d4f334484f73ea0bf381fe423511a5037e2c7ef9c",
+    "id": "T003102",
+    "english": "ASLEEP",
+    "russian": [
+      "Сон",
+      "Спит"
+    ],
+    "group": "small battle status"
+  },
+  {
+    "sha256": "80ab865fb676ee78a9ec91aab77a70f2995bcf2a8fcb1197e0e5e972595d8579",
+    "id": "T003103",
+    "english": "FROZEN",
+    "russian": [
+      "Заморозка",
+      "Замёрз",
+      "Заморожен"
+    ],
+    "group": "small battle status"
+  },
+  {
+    "sha256": "1cab07aea959d486d788a0c74fc4545fb40bce11b65baff3212f16a2665d2c44",
+    "id": "T003104",
+    "english": "BURNED",
+    "russian": [
+      "Ожог",
+      "Обожжён"
+    ],
+    "group": "small battle status"
+  },
+  {
+    "sha256": "fd52531c4550efeba3a58ecbcf2d7da052eeddf293146a7053f519033cf62623",
+    "id": "T003105",
+    "english": "POISONED",
+    "russian": [
+      "Отравление",
+      "Отравлен"
+    ],
+    "group": "small battle status"
+  },
+  {
+    "sha256": "aa668d390912e2fea65be618c4f009f8fc4963945c9b4b7e8000f4d22efc6454",
+    "id": "T003260",
+    "english": "MEGA EVOLUTION",
+    "russian": [
+      "Мега эволюция",
+      "Мегаэволюция"
+    ],
+    "group": "multiline"
+  },
+  {
+    "sha256": "82fff5bd832eecf2352d2e93753d2a7dc34f8e57782975705712a2edcb446b24",
+    "id": "T003262",
+    "english": "SHIFT",
+    "russian": [
+      "Смена",
+      "Сменить",
+      "Переместить",
+      "Перестроение"
+    ],
+    "group": "illustrated battle button"
+  },
+  {
+    "sha256": "433a9362528d4033c80f82f6a45ed896aa8a99e6b624e9fd7c53cc1ffe987559",
+    "id": "T003395",
+    "english": "LOSE",
+    "russian": [
+      "Поражение",
+      "Проигрыш"
+    ],
+    "group": "gradient artwork"
+  },
+  {
+    "sha256": "516a1ac5bd98d6968f6429a17920c3476c3b296e8726982318be70504bafc27a",
+    "id": "T003424",
+    "english": "RESULTS",
+    "russian": [
+      "Результаты",
+      "Итоги"
+    ],
+    "group": "illustrated result ribbon"
+  },
+  {
+    "sha256": "e4d959e4df862c8c441982958a4c744d82ba6a3f3631f9f8131969c5a65d5526",
+    "id": "T003467",
+    "english": "TYPE 1",
+    "russian": [
+      "Тип 1",
+      "Первый тип"
+    ],
+    "group": "glowing badge"
+  },
+  {
+    "sha256": "61bac7267c30f79f6ac93dd78e2e2d32e90fa5ac2eb5e0ca1da1830ee8532074",
+    "id": "T003471",
+    "english": "ALL",
+    "russian": [
+      "Все",
+      "Всё"
+    ],
+    "group": "glowing badge"
+  },
+  {
+    "sha256": "ea54aab9c0d3e5d148bb7b8ae85d827e33b52bb42c832e42830edb5b09df668c",
+    "id": "T003479",
+    "english": "COMPARE",
+    "russian": [
+      "Сравнить",
+      "Сравнение"
+    ],
+    "group": "outlined lettering"
+  },
+  {
+    "sha256": "2b5d5a8257d4d51b2a2b73d1e7c41d511d5a04cd5d1425cea4cfc3990b85b169",
+    "id": "T003799",
+    "english": "PRESS START",
+    "russian": [
+      "Нажмите пуск",
+      "Нажмите старт",
+      "Нажмите кнопку пуск",
+      "Нажмите кнопку старт"
+    ],
+    "group": "ETC1A4"
+  },
+  {
+    "sha256": "8299f04303b51905e20be0611f008c35f4ed6b833923f2966ea0f4ccc6a8b4af",
+    "id": "T003794",
+    "english": "PUSH START BUTTON",
+    "russian": [
+      "Нажмите кнопку пуск",
+      "Нажмите кнопку старт"
+    ],
+    "group": "ETC1A4"
+  },
+  {
+    "sha256": "ba11c28f70752eb987cb010a3069510c8c35743367224f1bfc23aa053f4dad8e",
+    "id": "T004707",
+    "english": "ATTACK",
+    "russian": [
+      "Атака"
+    ],
+    "group": "ETC1A4 stat"
+  },
+  {
+    "sha256": "d590292d75cefba12039e98d4dabae6d2a279d0310ce644f918444e40a78d811",
+    "id": "T004708",
+    "english": "SPEED",
+    "russian": [
+      "Скорость"
+    ],
+    "group": "ETC1A4 stat"
+  },
+  {
+    "sha256": "c50ed854725bb09aab5ceb275c4c7e4f8d9d0b66d68765f0f37c0dd82af160bd",
+    "id": "T003786",
+    "english": null,
+    "russian": [],
+    "group": "ETC1A4 German negative"
+  }
+]
